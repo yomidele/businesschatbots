@@ -1,103 +1,116 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Bot, Globe, MessageSquare, Code, Zap, Shield } from "lucide-react";
+import { Bot, Globe, MessageSquare, Code, Zap, Shield, ArrowRight, Sparkles, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-              <Bot className="h-5 w-5 text-primary-foreground" />
+      <nav className="border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="container flex h-14 items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md gradient-primary">
+              <Bot className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold">AgentHub</span>
+            <span className="font-semibold">AgentHub</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" asChild><Link to="/login">Sign in</Link></Button>
-            <Button asChild><Link to="/signup">Get Started</Link></Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild><Link to="/login">Sign in</Link></Button>
+            <Button size="sm" asChild><Link to="/signup">Start building <ArrowRight className="ml-1 h-3 w-3" /></Link></Button>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="container py-20 md:py-32 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm text-accent-foreground mb-6">
-            <Zap className="h-3.5 w-3.5" />
-            AI-powered customer support
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
-            Turn any website into an{" "}
-            <span className="text-primary">AI sales agent</span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Connect your website, and we'll build an AI agent that knows your business inside out.
-            It answers questions, drives sales, and works 24/7.
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Button size="lg" asChild><Link to="/signup">Start for free</Link></Button>
-            <Button size="lg" variant="outline" asChild><Link to="/login">Sign in</Link></Button>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Features */}
-      <section className="container py-20 border-t">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold mb-3">How it works</h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">Three steps to deploy your AI support agent</p>
-        </div>
-        <div className="grid gap-8 md:grid-cols-3 max-w-4xl mx-auto">
-          {[
-            { icon: Globe, title: "Connect your site", desc: "Enter your website URL and we'll crawl and understand your content automatically." },
-            { icon: MessageSquare, title: "AI learns your business", desc: "Your agent builds a knowledge base from your services, pricing, FAQs, and policies." },
-            { icon: Code, title: "Deploy everywhere", desc: "Test in our dashboard or embed a chat widget on your website with one script tag." },
-          ].map((feature, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.15 }}
-              viewport={{ once: true }}
-              className="text-center"
-            >
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
-                <feature.icon className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <h3 className="font-semibold mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">{feature.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Trust bar */}
-      <section className="container py-16 border-t">
-        <div className="flex flex-wrap items-center justify-center gap-8 text-muted-foreground">
-          {[
-            { icon: Shield, text: "Enterprise-grade security" },
-            { icon: Zap, text: "Sub-2 second responses" },
-            { icon: Bot, text: "Adapts to any business" },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <item.icon className="h-4 w-4" />
-              {item.text}
+      <section className="border-b">
+        <div className="container py-24 md:py-32 max-w-4xl text-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <div className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1 text-xs text-muted-foreground mb-8">
+              <Sparkles className="h-3 w-3 text-primary" />
+              AI-powered customer support for any website
             </div>
-          ))}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1]">
+              Turn your website into an
+              <span className="text-primary"> intelligent agent</span>
+            </h1>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
+              Connect any website, auto-extract content, and deploy an AI agent that answers questions, drives sales, and works 24/7. Powered by OpenAI & Groq.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button size="lg" asChild><Link to="/signup">Get started free <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
+              <Button size="lg" variant="outline" asChild><Link to="/login">Sign in</Link></Button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Features grid */}
+      <section className="border-b">
+        <div className="container py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">How it works</h2>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">Three steps to deploy your AI support agent</p>
+          </div>
+          <div className="grid gap-px md:grid-cols-3 max-w-4xl mx-auto border rounded-lg overflow-hidden bg-border">
+            {[
+              { icon: Globe, title: "Connect your site", desc: "Paste your URL. We'll crawl and understand your website content with Firecrawl." },
+              { icon: MessageSquare, title: "AI learns everything", desc: "Your agent builds a knowledge base from services, pricing, FAQs, and policies." },
+              { icon: Code, title: "Deploy anywhere", desc: "Test in-app or embed a chat widget on your site with a single script tag." },
+            ].map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-background p-8"
+              >
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+                  <feature.icon className="h-5 w-5 text-foreground" />
+                </div>
+                <h3 className="font-semibold mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Stats / Trust */}
+      <section className="border-b">
+        <div className="container py-12">
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-sm text-muted-foreground">
+            {[
+              { icon: Shield, text: "Enterprise-grade security" },
+              { icon: Zap, text: "Sub-2s response times" },
+              { icon: BarChart3, text: "Conversation analytics" },
+              { icon: Bot, text: "Multi-provider AI" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <item.icon className="h-4 w-4 text-primary" />
+                <span>{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="border-b">
+        <div className="container py-20 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to get started?</h2>
+          <p className="text-muted-foreground text-sm mb-8 max-w-md mx-auto">
+            Create your first AI agent in under 5 minutes. No credit card required.
+          </p>
+          <Button size="lg" asChild><Link to="/signup">Create free account <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} AgentHub. AI-powered customer support.
+      <footer className="py-6">
+        <div className="container text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} AgentHub. Built with OpenAI & Groq.
         </div>
       </footer>
     </div>

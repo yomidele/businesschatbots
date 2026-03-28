@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Bot } from "lucide-react";
 
@@ -29,16 +28,36 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md shadow-elevated">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl gradient-primary">
-            <Bot className="h-6 w-6 text-primary-foreground" />
+    <div className="flex min-h-screen">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex lg:w-1/2 gradient-hero items-center justify-center p-12">
+        <div className="max-w-md">
+          <div className="flex items-center gap-2.5 mb-8">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md gradient-primary">
+              <Bot className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="text-lg font-semibold text-white">AgentHub</span>
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>Sign in to manage your AI agents</CardDescription>
-        </CardHeader>
-        <CardContent>
+          <h2 className="text-3xl font-bold text-white mb-4">
+            AI agents that know your business
+          </h2>
+          <p className="text-white/60 leading-relaxed">
+            Connect your website, build a knowledge base, and deploy intelligent customer support agents in minutes.
+          </p>
+        </div>
+      </div>
+
+      {/* Right form */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="lg:hidden flex items-center gap-2 mb-8">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md gradient-primary">
+              <Bot className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="font-semibold">AgentHub</span>
+          </div>
+          <h1 className="text-2xl font-semibold mb-1">Welcome back</h1>
+          <p className="text-sm text-muted-foreground mb-6">Sign in to manage your AI agents</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -52,12 +71,12 @@ const Login = () => {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
             <Link to="/signup" className="text-primary hover:underline font-medium">Sign up</Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
