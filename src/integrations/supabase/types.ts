@@ -151,6 +151,8 @@ export type Database = {
       }
       sites: {
         Row: {
+          ai_model: string
+          ai_provider: string
           created_at: string
           id: string
           last_crawled_at: string | null
@@ -160,8 +162,11 @@ export type Database = {
           updated_at: string
           url: string
           user_id: string
+          welcome_message: string | null
         }
         Insert: {
+          ai_model?: string
+          ai_provider?: string
           created_at?: string
           id?: string
           last_crawled_at?: string | null
@@ -171,8 +176,11 @@ export type Database = {
           updated_at?: string
           url: string
           user_id: string
+          welcome_message?: string | null
         }
         Update: {
+          ai_model?: string
+          ai_provider?: string
           created_at?: string
           id?: string
           last_crawled_at?: string | null
@@ -182,6 +190,7 @@ export type Database = {
           updated_at?: string
           url?: string
           user_id?: string
+          welcome_message?: string | null
         }
         Relationships: []
       }
