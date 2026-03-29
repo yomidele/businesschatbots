@@ -239,15 +239,18 @@ async function crawlWithApify(supabase: any, siteId: string, url: string, apiKey
   }
 
   const items = await datasetRes.json();
+  console.log(`Apify returned ${items.length} items. Sample keys: ${items.length > 0 ? Object.keys(items[0]).join(', ') : 'none'}`);
   let crawledCount = 0;
 
   for (const item of items) {
     try {
-      const markdown = item.text || item.markdown || item.html || "";
-      const title = item.metadata?.title || item.title || "";
-      const pageUrl = item.url || url;
+      // Website Content Crawler returns 'text' field for extracted content
+      const markdown = item.text || item.markdown || item.body || item.html || "";
+      const title = item.metadata?.title || item.title || item.pageTitle || "";
+      const pageUrl = item.url || item.loadedUrl || url;
 
-      if (!markdown || markdown.length < 50) continue;
+      console.log(`Processing: ${pageUrl} - content length: ${markdown.length}, title: ${title}`);
+      if (!markdown || markdown.length < 20) continue;
 
       const chunks = splitIntoChunks(markdown, 1000);
       const category = inferCategory(pageUrl, title, markdown);
