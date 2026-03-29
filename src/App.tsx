@@ -49,6 +49,7 @@ const App = () => (
             <Route path="/conversations" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
             <Route path="/chat/:siteId" element={<ProtectedRoute withLayout={false}><ChatTest /></ProtectedRoute>} />
             <Route path="/embed/:siteId" element={<ProtectedRoute><EmbedCode /></ProtectedRoute>} />
+            <Route path="/docs" element={<ProtectedRoute><Docs /></ProtectedRoute>} />
             <Route path="/widget/:siteId" element={<ChatWidget />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
