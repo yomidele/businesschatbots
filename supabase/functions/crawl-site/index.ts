@@ -20,9 +20,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY");
+    const apifyKey = Deno.env.get("APIFY_API_KEY");
 
-    if (!firecrawlKey) {
-      return new Response(JSON.stringify({ error: "Firecrawl not configured" }), {
+    if (!firecrawlKey && !apifyKey) {
+      return new Response(JSON.stringify({ error: "No crawling service configured. Set FIRECRAWL_API_KEY or APIFY_API_KEY." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -64,76 +65,44 @@ serve(async (req) => {
     // Update status to crawling
     await supabase.from("sites").update({ status: "crawling" }).eq("id", siteId);
 
-    // Step 1: Map the site to get URLs
     let formattedUrl = site.url.trim();
     if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    console.log("Mapping site:", formattedUrl);
-    const mapRes = await fetch("https://api.firecrawl.dev/v1/map", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url: formattedUrl, limit: 50, includeSubdomains: false }),
-    });
-    const mapData = await mapRes.json();
-    
-    if (!mapRes.ok) {
-      console.error("Map failed:", mapData);
-      await supabase.from("sites").update({ status: "error" }).eq("id", siteId);
-      return new Response(JSON.stringify({ error: "Failed to map site" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const urls = (mapData.links || []).slice(0, 20); // Limit to 20 pages
-    console.log(`Found ${urls.length} URLs`);
-
-    // Step 2: Scrape each URL
-    // Clear old chunks first
+    // Clear old chunks
     await supabase.from("knowledge_chunks").delete().eq("site_id", siteId);
 
     let crawledCount = 0;
-    for (const pageUrl of urls) {
+    let crawlMethod = "firecrawl";
+
+    // Try Firecrawl first
+    if (firecrawlKey) {
       try {
-        console.log("Scraping:", pageUrl);
-        const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ url: pageUrl, formats: ["markdown"], onlyMainContent: true }),
-        });
-
-        if (!scrapeRes.ok) {
-          console.error(`Failed to scrape ${pageUrl}: ${scrapeRes.status}`);
-          continue;
-        }
-
-        const scrapeData = await scrapeRes.json();
-        const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
-        const title = scrapeData.data?.metadata?.title || scrapeData.metadata?.title || "";
-
-        if (!markdown || markdown.length < 50) continue;
-
-        // Split into chunks (~1000 chars each)
-        const chunks = splitIntoChunks(markdown, 1000);
-        
-        // Infer category from URL/title
-        const category = inferCategory(pageUrl, title, markdown);
-
-        for (const chunk of chunks) {
-          await supabase.from("knowledge_chunks").insert({
-            site_id: siteId,
-            source_url: pageUrl,
-            category,
-            content: chunk,
-            title,
-          });
-        }
-
-        crawledCount++;
+        crawledCount = await crawlWithFirecrawl(supabase, siteId, formattedUrl, firecrawlKey);
+        console.log(`Firecrawl succeeded: ${crawledCount} pages`);
       } catch (err) {
-        console.error(`Error scraping ${pageUrl}:`, err);
+        console.error("Firecrawl failed, trying Apify fallback:", err);
+        crawledCount = 0;
       }
+    }
+
+    // Fallback to Apify if Firecrawl failed or unavailable
+    if (crawledCount === 0 && apifyKey) {
+      try {
+        crawlMethod = "apify";
+        crawledCount = await crawlWithApify(supabase, siteId, formattedUrl, apifyKey);
+        console.log(`Apify succeeded: ${crawledCount} pages`);
+      } catch (err) {
+        console.error("Apify also failed:", err);
+      }
+    }
+
+    if (crawledCount === 0) {
+      await supabase.from("sites").update({ status: "error" }).eq("id", siteId);
+      return new Response(JSON.stringify({ error: "All crawl methods failed. Check your API credits and try again." }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Update site status
@@ -143,7 +112,7 @@ serve(async (req) => {
       last_crawled_at: new Date().toISOString(),
     }).eq("id", siteId);
 
-    return new Response(JSON.stringify({ success: true, pagesCrawled: crawledCount }), {
+    return new Response(JSON.stringify({ success: true, pagesCrawled: crawledCount, method: crawlMethod }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
@@ -155,11 +124,154 @@ serve(async (req) => {
   }
 });
 
+// ─── Firecrawl ───
+async function crawlWithFirecrawl(supabase: any, siteId: string, url: string, apiKey: string): Promise<number> {
+  console.log("Mapping site with Firecrawl:", url);
+  const mapRes = await fetch("https://api.firecrawl.dev/v1/map", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ url, limit: 50, includeSubdomains: false }),
+  });
+  const mapData = await mapRes.json();
+
+  if (!mapRes.ok) {
+    throw new Error(`Firecrawl map failed: ${mapData.error || mapRes.status}`);
+  }
+
+  const urls = (mapData.links || []).slice(0, 20);
+  console.log(`Firecrawl found ${urls.length} URLs`);
+
+  let crawledCount = 0;
+  for (const pageUrl of urls) {
+    try {
+      const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ url: pageUrl, formats: ["markdown"], onlyMainContent: true }),
+      });
+
+      if (!scrapeRes.ok) continue;
+
+      const scrapeData = await scrapeRes.json();
+      const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
+      const title = scrapeData.data?.metadata?.title || scrapeData.metadata?.title || "";
+
+      if (!markdown || markdown.length < 50) continue;
+
+      const chunks = splitIntoChunks(markdown, 1000);
+      const category = inferCategory(pageUrl, title, markdown);
+
+      for (const chunk of chunks) {
+        await supabase.from("knowledge_chunks").insert({
+          site_id: siteId, source_url: pageUrl, category, content: chunk, title,
+        });
+      }
+      crawledCount++;
+    } catch (err) {
+      console.error(`Firecrawl scrape error for ${pageUrl}:`, err);
+    }
+  }
+  return crawledCount;
+}
+
+// ─── Apify (Website Content Crawler) ───
+async function crawlWithApify(supabase: any, siteId: string, url: string, apiKey: string): Promise<number> {
+  console.log("Starting Apify Website Content Crawler for:", url);
+
+  // Start the actor run
+  const runRes = await fetch(
+    `https://api.apify.com/v2/acts/apify~website-content-crawler/runs?token=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        startUrls: [{ url }],
+        maxCrawlPages: 20,
+        crawlerType: "cheerio",
+        maxConcurrency: 5,
+        proxyConfiguration: { useApifyProxy: true },
+      }),
+    }
+  );
+
+  if (!runRes.ok) {
+    const errText = await runRes.text();
+    throw new Error(`Apify run start failed [${runRes.status}]: ${errText}`);
+  }
+
+  const runData = await runRes.json();
+  const runId = runData.data?.id;
+  if (!runId) throw new Error("No run ID returned from Apify");
+
+  console.log(`Apify run started: ${runId}`);
+
+  // Poll for completion (max 5 min)
+  const maxWait = 300_000;
+  const pollInterval = 5_000;
+  let elapsed = 0;
+
+  while (elapsed < maxWait) {
+    await new Promise(r => setTimeout(r, pollInterval));
+    elapsed += pollInterval;
+
+    const statusRes = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}?token=${apiKey}`
+    );
+    if (!statusRes.ok) continue;
+
+    const statusData = await statusRes.json();
+    const status = statusData.data?.status;
+    console.log(`Apify run status: ${status} (${elapsed / 1000}s)`);
+
+    if (status === "SUCCEEDED") break;
+    if (status === "FAILED" || status === "ABORTED" || status === "TIMED-OUT") {
+      throw new Error(`Apify run ${status}`);
+    }
+  }
+
+  // Fetch results from dataset
+  const datasetRes = await fetch(
+    `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${apiKey}&format=json&limit=20`
+  );
+
+  if (!datasetRes.ok) {
+    throw new Error(`Failed to fetch Apify dataset: ${datasetRes.status}`);
+  }
+
+  const items = await datasetRes.json();
+  let crawledCount = 0;
+
+  for (const item of items) {
+    try {
+      const markdown = item.text || item.markdown || item.html || "";
+      const title = item.metadata?.title || item.title || "";
+      const pageUrl = item.url || url;
+
+      if (!markdown || markdown.length < 50) continue;
+
+      const chunks = splitIntoChunks(markdown, 1000);
+      const category = inferCategory(pageUrl, title, markdown);
+
+      for (const chunk of chunks) {
+        await supabase.from("knowledge_chunks").insert({
+          site_id: siteId, source_url: pageUrl, category, content: chunk, title,
+        });
+      }
+      crawledCount++;
+    } catch (err) {
+      console.error("Apify item processing error:", err);
+    }
+  }
+
+  return crawledCount;
+}
+
+// ─── Utilities ───
 function splitIntoChunks(text: string, maxLen: number): string[] {
   const chunks: string[] = [];
   const paragraphs = text.split(/\n\n+/);
   let current = "";
-  
+
   for (const p of paragraphs) {
     if ((current + "\n\n" + p).length > maxLen && current.length > 0) {
       chunks.push(current.trim());
