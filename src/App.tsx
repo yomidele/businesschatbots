@@ -13,6 +13,7 @@ import Conversations from "./pages/Conversations";
 import ChatTest from "./pages/ChatTest";
 import EmbedCode from "./pages/EmbedCode";
 import ChatWidget from "./pages/ChatWidget";
+import Docs from "./pages/Docs";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
