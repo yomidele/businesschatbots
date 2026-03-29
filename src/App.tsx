@@ -13,6 +13,7 @@ import Conversations from "./pages/Conversations";
 import ChatTest from "./pages/ChatTest";
 import EmbedCode from "./pages/EmbedCode";
 import ChatWidget from "./pages/ChatWidget";
+import Docs from "./pages/Docs";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/conversations" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
             <Route path="/chat/:siteId" element={<ProtectedRoute withLayout={false}><ChatTest /></ProtectedRoute>} />
             <Route path="/embed/:siteId" element={<ProtectedRoute><EmbedCode /></ProtectedRoute>} />
+            <Route path="/docs" element={<ProtectedRoute><Docs /></ProtectedRoute>} />
             <Route path="/widget/:siteId" element={<ChatWidget />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

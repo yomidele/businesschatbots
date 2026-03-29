@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { to: "/dashboard", icon: Globe, label: "Sites" },
   { to: "/conversations", icon: MessageSquare, label: "Conversations" },
+  { to: "/docs", icon: Code2, label: "Docs" },
 ];
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
