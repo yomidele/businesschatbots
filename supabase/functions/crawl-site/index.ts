@@ -178,7 +178,7 @@ async function crawlWithFirecrawl(supabase: any, siteId: string, url: string, ap
 async function crawlWithApify(supabase: any, siteId: string, url: string, apiKey: string): Promise<number> {
   console.log("Starting Apify Website Content Crawler for:", url);
 
-  // Start the actor run
+  // Start the actor run - use playwright for JS-rendered sites
   const runRes = await fetch(
     `https://api.apify.com/v2/acts/apify~website-content-crawler/runs?token=${apiKey}`,
     {
@@ -187,7 +187,7 @@ async function crawlWithApify(supabase: any, siteId: string, url: string, apiKey
       body: JSON.stringify({
         startUrls: [{ url }],
         maxCrawlPages: 20,
-        crawlerType: "cheerio",
+        crawlerType: "playwright:adaptive",
         maxConcurrency: 5,
         proxyConfiguration: { useApifyProxy: true },
       }),
