@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
@@ -13,23 +13,56 @@ type ChatInterfaceProps = {
   supabaseUrl?: string;
   supabaseKey?: string;
   embedded?: boolean;
+  welcomeMessage?: string;
 };
 
-const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = false }: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Msg[]>([]);
+// Generate or retrieve persistent visitor ID
+const getVisitorId = (): string => {
+  const key = "agenthub_visitor_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+  return id;
+};
+
+// Cache messages per site in localStorage
+const getCachedMessages = (siteId: string): Msg[] => {
+  try {
+    const raw = localStorage.getItem(`agenthub_msgs_${siteId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+};
+
+const cacheMessages = (siteId: string, msgs: Msg[]) => {
+  try {
+    localStorage.setItem(`agenthub_msgs_${siteId}`, JSON.stringify(msgs.slice(-50)));
+  } catch {}
+};
+
+const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = false, welcomeMessage }: ChatInterfaceProps) => {
+  const [messages, setMessages] = useState<Msg[]>(() => getCachedMessages(siteId));
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const visitorId = useRef(getVisitorId());
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Persist messages to localStorage
+  useEffect(() => {
+    if (messages.length > 0) cacheMessages(siteId, messages);
+  }, [messages, siteId]);
+
   const baseUrl = supabaseUrl || import.meta.env.VITE_SUPABASE_URL;
   const apiKey = supabaseKey || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return;
 
     const userMsg: Msg = { role: "user", content: input.trim() };
@@ -58,8 +91,27 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ siteId, messages: allMessages }),
+        body: JSON.stringify({
+          siteId,
+          messages: allMessages,
+          conversationId,
+          visitorId: visitorId.current,
+        }),
       });
+
+      // Handle non-streaming fallback response
+      const contentType = resp.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await resp.json();
+        if (data.reply) upsertAssistant(data.reply);
+        if (data.conversationId) setConversationId(data.conversationId);
+        setIsLoading(false);
+        return;
+      }
+
+      // Get conversation ID from header
+      const convoId = resp.headers.get("X-Conversation-Id");
+      if (convoId) setConversationId(convoId);
 
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Stream failed" }));
@@ -105,7 +157,9 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
 
     setIsLoading(false);
     inputRef.current?.focus();
-  };
+  }, [input, isLoading, messages, baseUrl, apiKey, siteId, conversationId]);
+
+  const defaultWelcome = welcomeMessage || "Hi there! 👋 How can I help you today?";
 
   const containerClass = embedded
     ? "flex flex-col h-full bg-card rounded-xl overflow-hidden border"
@@ -113,7 +167,6 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
 
   return (
     <div className={containerClass}>
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b bg-card">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
           <Bot className="h-4 w-4 text-primary-foreground" />
@@ -127,12 +180,11 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center py-12 animate-fade-in">
             <Bot className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">Hi there! 👋 How can I help you today?</p>
+            <p className="text-sm text-muted-foreground">{defaultWelcome}</p>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -142,20 +194,14 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
                 <Bot className="h-3.5 w-3.5 text-primary-foreground" />
               </div>
             )}
-            <div
-              className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted"
-              }`}
-            >
+            <div className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
+              msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+            }`}>
               {msg.role === "assistant" ? (
                 <div className="prose prose-sm max-w-none dark:prose-invert">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                 </div>
-              ) : (
-                msg.content
-              )}
+              ) : msg.content}
             </div>
             {msg.role === "user" && (
               <div className="flex-shrink-0 h-7 w-7 rounded-lg bg-secondary flex items-center justify-center">
@@ -177,12 +223,8 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="border-t bg-card px-4 py-3">
-        <form
-          onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-          className="flex gap-2"
-        >
+        <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
           <Input
             ref={inputRef}
             value={input}
