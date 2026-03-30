@@ -108,133 +108,146 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sites</h1>
-          <p className="text-sm text-muted-foreground mt-1">Connect websites to create AI support agents</p>
+    <div className="p-8 max-w-7xl mx-auto">
+      {/* Header with Greeting */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-bold">Hello {user?.user_metadata?.full_name || user?.email?.split("@")[0]}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="inline-block h-2 w-2 bg-yellow-400 rounded-full"></span>
+              <p className="text-sm text-gray-600">Status: Online</p>
+            </div>
+          </div>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-2" /> New site</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Connect a website</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); addSiteMutation.mutate(); }} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Site name</Label>
-                <Input value={newSiteName} onChange={(e) => setNewSiteName(e.target.value)} required placeholder="My Business" />
-              </div>
-              <div className="space-y-2">
-                <Label>Website URL</Label>
-                <Input value={newSiteUrl} onChange={(e) => setNewSiteUrl(e.target.value)} required placeholder="https://example.com" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>AI Provider</Label>
-                  <Select value={newProvider} onValueChange={(v) => { setNewProvider(v); setNewModel(AI_MODELS[v].models[0].value); }}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI</SelectItem>
-                      <SelectItem value="groq">Groq</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Model</Label>
-                  <Select value={newModel} onValueChange={setNewModel}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {AI_MODELS[newProvider].models.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button type="submit" className="w-full" disabled={addSiteMutation.isPending}>
-                {addSiteMutation.isPending ? "Adding..." : "Add site"}
+
+        {/* Quick Actions */}
+        <div className="flex gap-3">
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="h-4 w-4 mr-2" /> New site
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Connect a website</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); addSiteMutation.mutate(); }} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Site name</Label>
+                  <Input value={newSiteName} onChange={(e) => setNewSiteName(e.target.value)} required placeholder="My Business" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Website URL</Label>
+                  <Input value={newSiteUrl} onChange={(e) => setNewSiteUrl(e.target.value)} required placeholder="https://example.com" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>AI Provider</Label>
+                    <Select value={newProvider} onValueChange={(v) => { setNewProvider(v); setNewModel(AI_MODELS[v].models[0].value); }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="openai">OpenAI</SelectItem>
+                        <SelectItem value="groq">Groq</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Model</Label>
+                    <Select value={newModel} onValueChange={setNewModel}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {AI_MODELS[newProvider].models.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={addSiteMutation.isPending}>
+                  {addSiteMutation.isPending ? "Adding..." : "Add site"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
       ) : !sites?.length ? (
-        <div className="border border-dashed rounded-lg flex flex-col items-center justify-center py-20">
-          <Globe className="h-10 w-10 text-muted-foreground mb-4" />
-          <h3 className="font-medium mb-1">No sites connected</h3>
-          <p className="text-muted-foreground text-sm mb-4">Add your first website to create an AI agent</p>
-          <Button size="sm" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" /> New site</Button>
+        <div className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center py-20 bg-gray-50">
+          <Globe className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="font-semibold text-lg mb-2">No sites connected</h3>
+          <p className="text-gray-600 text-sm mb-6">Add your first website to create an AI agent</p>
+          <Button size="sm" onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" /> New site
+          </Button>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left font-medium text-muted-foreground px-4 py-3">Name</th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Provider</th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Status</th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Pages</th>
-                <th className="text-right font-medium text-muted-foreground px-4 py-3">Actions</th>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="text-left font-semibold text-gray-700 px-6 py-4">Name</th>
+                <th className="text-left font-semibold text-gray-700 px-6 py-4 hidden md:table-cell">Provider</th>
+                <th className="text-left font-semibold text-gray-700 px-6 py-4 hidden sm:table-cell">Status</th>
+                <th className="text-left font-semibold text-gray-700 px-6 py-4 hidden lg:table-cell">Pages</th>
+                <th className="text-right font-semibold text-gray-700 px-6 py-4">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sites.map((site) => (
-                <tr key={site.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={site.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4">
                     <div>
-                      <p className="font-medium">{site.name}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <p className="font-medium text-gray-900">{site.name}</p>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                         <ExternalLink className="h-3 w-3" />
                         {site.url}
                       </p>
                     </div>
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-6 py-4 hidden md:table-cell">
                     <div className="flex items-center gap-1.5">
-                      <Badge variant="outline" className="text-xs font-mono">
+                      <Badge variant="outline" className="text-xs font-mono bg-gray-100 border-gray-300">
                         {(site as any).ai_provider || "openai"}/{(site as any).ai_model || "gpt-4o-mini"}
                       </Badge>
                     </div>
                   </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
+                  <td className="px-6 py-4 hidden sm:table-cell">
                     <Badge className={statusColors[site.status] || ""} variant="outline">
                       {site.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">
+                  <td className="px-6 py-4 hidden lg:table-cell text-gray-600">
                     {site.pages_crawled > 0 ? site.pages_crawled : "—"}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 justify-end">
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2 justify-end">
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8"
+                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
                         onClick={() => crawlMutation.mutate(site.id)}
                         disabled={crawlMutation.isPending || site.status === "crawling"}
                         title={site.status === "pending" ? "Crawl" : "Re-crawl"}
                       >
-                        {site.status === "crawling" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                        {site.status === "crawling" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                       </Button>
                       {site.status === "ready" && (
                         <>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Test Chat">
-                            <Link to={`/chat/${site.id}`}><MessageSquare className="h-3.5 w-3.5" /></Link>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-500 hover:text-gray-700" asChild title="Test Chat">
+                            <Link to={`/chat/${site.id}`}><MessageSquare className="h-4 w-4" /></Link>
                           </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Embed Code">
-                            <Link to={`/embed/${site.id}`}><Code className="h-3.5 w-3.5" /></Link>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-500 hover:text-gray-700" asChild title="Embed Code">
+                            <Link to={`/embed/${site.id}`}><Code className="h-4 w-4" /></Link>
                           </Button>
                         </>
                       )}
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteMutation.mutate(site.id)} title="Delete">
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-500 hover:text-red-600" onClick={() => deleteMutation.mutate(site.id)} title="Delete">
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </td>
