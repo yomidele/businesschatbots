@@ -70,8 +70,9 @@ serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    // Clear old chunks
+    // Clear old chunks and products (re-crawl)
     await supabase.from("knowledge_chunks").delete().eq("site_id", siteId);
+    await supabase.from("products").delete().eq("site_id", siteId);
 
     let crawledCount = 0;
     let crawlMethod = "firecrawl";
