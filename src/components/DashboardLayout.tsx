@@ -2,13 +2,18 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  Bot, Globe, MessageSquare, LogOut, Settings, ChevronLeft, ChevronRight, Code2
+  Bot, Globe, MessageSquare, LogOut, ChevronLeft, ChevronRight, Code2,
+  LayoutDashboard, Package, ShoppingCart, CreditCard
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/dashboard", icon: Globe, label: "Sites" },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Overview" },
+  { to: "/sites", icon: Globe, label: "Sites" },
+  { to: "/products", icon: Package, label: "Products" },
+  { to: "/orders", icon: ShoppingCart, label: "Orders" },
+  { to: "/payments", icon: CreditCard, label: "Payments" },
   { to: "/conversations", icon: MessageSquare, label: "Conversations" },
   { to: "/docs", icon: Code2, label: "Docs" },
 ];
@@ -20,14 +25,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Sidebar */}
       <aside
         className={cn(
           "flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-200",
           collapsed ? "w-16" : "w-60"
         )}
       >
-        {/* Logo */}
         <div className="flex h-14 items-center gap-2.5 px-4 border-b border-sidebar-border">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md gradient-primary">
             <Bot className="h-4 w-4 text-primary-foreground" />
@@ -35,10 +38,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           {!collapsed && <span className="font-semibold text-sm text-sidebar-accent-foreground">AgentHub</span>}
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-2 py-3 space-y-1">
           {navItems.map((item) => {
-            const active = location.pathname === item.to || 
+            const active = location.pathname === item.to ||
               (item.to !== "/dashboard" && location.pathname.startsWith(item.to));
             return (
               <Link
@@ -58,7 +60,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           })}
         </nav>
 
-        {/* Bottom */}
         <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -82,7 +83,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>

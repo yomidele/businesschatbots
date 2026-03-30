@@ -8,7 +8,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
+import Overview from "./pages/Overview";
+import Sites from "./pages/Sites";
+import Products from "./pages/Products";
+import Orders from "./pages/Orders";
+import Payments from "./pages/Payments";
 import Conversations from "./pages/Conversations";
 import ChatTest from "./pages/ChatTest";
 import EmbedCode from "./pages/EmbedCode";
@@ -45,7 +49,11 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
+            <Route path="/sites" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
+            <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
             <Route path="/conversations" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
             <Route path="/chat/:siteId" element={<ProtectedRoute withLayout={false}><ChatTest /></ProtectedRoute>} />
             <Route path="/embed/:siteId" element={<ProtectedRoute><EmbedCode /></ProtectedRoute>} />
