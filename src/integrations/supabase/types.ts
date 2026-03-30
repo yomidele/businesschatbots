@@ -50,6 +50,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_active_at: string | null
           site_id: string
           updated_at: string
           visitor_id: string
@@ -57,6 +58,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_active_at?: string | null
           site_id: string
           updated_at?: string
           visitor_id?: string
@@ -64,6 +66,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_active_at?: string | null
           site_id?: string
           updated_at?: string
           visitor_id?: string
@@ -112,6 +115,164 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "knowledge_chunks_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          payment_reference: string | null
+          payment_status: string
+          product_id: string | null
+          quantity: number
+          site_id: string
+          total_amount: number
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          payment_reference?: string | null
+          payment_status?: string
+          product_id?: string | null
+          quantity?: number
+          site_id: string
+          total_amount: number
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          payment_reference?: string | null
+          payment_status?: string
+          product_id?: string | null
+          quantity?: number
+          site_id?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_configs: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          provider: string
+          public_key: string
+          secret_key: string
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider: string
+          public_key: string
+          secret_key: string
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider?: string
+          public_key?: string
+          secret_key?: string
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_configs_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number | null
+          site_id: string
+          stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price?: number | null
+          site_id: string
+          stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number | null
+          site_id?: string
+          stock?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"

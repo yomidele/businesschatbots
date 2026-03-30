@@ -70,8 +70,9 @@ serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    // Clear old chunks
+    // Clear old chunks and products (re-crawl)
     await supabase.from("knowledge_chunks").delete().eq("site_id", siteId);
+    await supabase.from("products").delete().eq("site_id", siteId);
 
     let crawledCount = 0;
     let crawlMethod = "firecrawl";
@@ -165,6 +166,12 @@ async function crawlWithFirecrawl(supabase: any, siteId: string, url: string, ap
         await supabase.from("knowledge_chunks").insert({
           site_id: siteId, source_url: pageUrl, category, content: chunk, title,
         });
+      }
+
+      // Extract products from page content
+      const extractedProducts = extractProducts(markdown, title, pageUrl);
+      for (const product of extractedProducts) {
+        await supabase.from("products").insert({ site_id: siteId, ...product });
       }
       crawledCount++;
     } catch (err) {
@@ -260,6 +267,12 @@ async function crawlWithApify(supabase: any, siteId: string, url: string, apiKey
           site_id: siteId, source_url: pageUrl, category, content: chunk, title,
         });
       }
+
+      // Extract products from page content
+      const extractedProducts = extractProducts(markdown, title, pageUrl);
+      for (const product of extractedProducts) {
+        await supabase.from("products").insert({ site_id: siteId, ...product });
+      }
       crawledCount++;
     } catch (err) {
       console.error("Apify item processing error:", err);
@@ -297,4 +310,65 @@ function inferCategory(url: string, title: string, content: string): string {
   if (lower.includes("product") || lower.includes("feature")) return "product";
   if (lower.includes("service")) return "service";
   return "general";
+}
+
+// Extract products/services from page content
+function extractProducts(content: string, title: string, sourceUrl: string): Array<{
+  name: string; description: string | null; price: number | null; category: string; image_url: string | null;
+}> {
+  const products: Array<any> = [];
+  const lines = content.split("\n");
+  
+  // Look for price patterns
+  const priceRegex = /[\$₦€£]\s*[\d,]+\.?\d*/g;
+  const imgRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+  
+  // Detect product-like sections (headers followed by price)
+  let currentProduct: any = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Detect headers as potential product names
+    const headerMatch = line.match(/^#{1,3}\s+(.+)/);
+    if (headerMatch) {
+      if (currentProduct?.name) {
+        products.push(currentProduct);
+      }
+      currentProduct = { name: headerMatch[1].trim(), description: null, price: null, category: "general", image_url: null };
+      continue;
+    }
+    
+    if (currentProduct) {
+      // Look for prices
+      const priceMatch = line.match(/[\$₦€£]\s*([\d,]+\.?\d*)/);
+      if (priceMatch && !currentProduct.price) {
+        currentProduct.price = parseFloat(priceMatch[1].replace(",", ""));
+      }
+      
+      // Look for images
+      const imgMatch = line.match(/!\[.*?\]\((https?:\/\/[^\s)]+)\)/);
+      if (imgMatch && !currentProduct.image_url) {
+        currentProduct.image_url = imgMatch[1];
+      }
+      
+      // Collect description (first non-empty, non-header line)
+      if (!currentProduct.description && line.length > 10 && !line.startsWith("#") && !line.startsWith("!")) {
+        currentProduct.description = line.slice(0, 200);
+      }
+    }
+  }
+  
+  if (currentProduct?.name) {
+    products.push(currentProduct);
+  }
+  
+  // Only return items that look like actual products (have a price or are on product pages)
+  const isProductPage = sourceUrl.toLowerCase().includes("product") || 
+    sourceUrl.toLowerCase().includes("shop") ||
+    sourceUrl.toLowerCase().includes("service") ||
+    title.toLowerCase().includes("product") ||
+    title.toLowerCase().includes("pricing");
+    
+  return products.filter(p => p.price || isProductPage).slice(0, 10);
 }
