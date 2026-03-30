@@ -167,6 +167,12 @@ async function crawlWithFirecrawl(supabase: any, siteId: string, url: string, ap
           site_id: siteId, source_url: pageUrl, category, content: chunk, title,
         });
       }
+
+      // Extract products from page content
+      const extractedProducts = extractProducts(markdown, title, pageUrl);
+      for (const product of extractedProducts) {
+        await supabase.from("products").insert({ site_id: siteId, ...product });
+      }
       crawledCount++;
     } catch (err) {
       console.error(`Firecrawl scrape error for ${pageUrl}:`, err);
