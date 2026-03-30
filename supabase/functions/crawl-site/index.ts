@@ -267,6 +267,12 @@ async function crawlWithApify(supabase: any, siteId: string, url: string, apiKey
           site_id: siteId, source_url: pageUrl, category, content: chunk, title,
         });
       }
+
+      // Extract products from page content
+      const extractedProducts = extractProducts(markdown, title, pageUrl);
+      for (const product of extractedProducts) {
+        await supabase.from("products").insert({ site_id: siteId, ...product });
+      }
       crawledCount++;
     } catch (err) {
       console.error("Apify item processing error:", err);
