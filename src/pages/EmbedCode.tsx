@@ -23,11 +23,11 @@ const EmbedCode = () => {
 
   const appUrl = window.location.origin;
 
-  const embedScript = `<!-- AgentHub Chat Widget -->
+  const embedScript = `<!-- AI Sales Rep Widget -->
 <script>
 (function() {
   var w = document.createElement('div');
-  w.id = 'agenthub-widget';
+  w.id = 'salesrep-widget';
   w.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;';
   document.body.appendChild(w);
 
@@ -51,34 +51,36 @@ const EmbedCode = () => {
   const handleCopy = () => {
     navigator.clipboard.writeText(embedScript);
     setCopied(true);
-    toast({ title: "Copied!", description: "Paste this into your website's HTML." });
+    toast({ title: "Copied!", description: "Paste this into your website's HTML before </body>." });
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-3xl">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
+      <div className="flex items-center gap-3 mb-6 sm:mb-8">
         <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-          <Link to="/dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link to="/sites"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
-        <div>
-          <h1 className="text-lg font-semibold">Embed Widget</h1>
-          <p className="text-xs text-muted-foreground">{site?.name} — {site?.url}</p>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold">Deploy Sales Rep</h1>
+          <p className="text-xs text-muted-foreground truncate">{site?.name} — {site?.url}</p>
         </div>
       </div>
 
       <div className="border rounded-lg">
         <div className="px-4 py-3 border-b bg-muted/50">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Installation code</p>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleCopy}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium">Installation code</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Paste before the closing {'</body>'} tag on your website.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" className="h-7 text-xs w-fit" onClick={handleCopy}>
               {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Paste before the closing {'</body>'} tag on your website.
-          </p>
         </div>
         <pre className="p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed text-muted-foreground">
           {embedScript}

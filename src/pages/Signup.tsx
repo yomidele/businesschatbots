@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Bot } from "lucide-react";
+import { Users } from "lucide-react";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [organization, setOrganization] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -31,36 +31,22 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-700 items-center justify-center p-12">
+    <div className="flex min-h-screen bg-background">
+      {/* Left branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary items-center justify-center p-12">
         <div className="max-w-md text-center">
           <div className="flex items-center gap-2.5 mb-12 justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur">
-              <Bot className="h-6 w-6 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground/20 backdrop-blur">
+              <Users className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-white">AgentHub</span>
+            <span className="text-xl font-bold text-primary-foreground">AI Sales Rep</span>
           </div>
-          <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
-            Intelligent customer support, automated
+          <h2 className="text-3xl font-bold text-primary-foreground mb-6 leading-tight">
+            Build your digital sales team
           </h2>
-          <p className="text-blue-100 leading-relaxed text-lg">
-            Deploy AI-powered chat agents in seconds. No coding required.
+          <p className="text-primary-foreground/80 leading-relaxed text-lg">
+            Every business gets a dedicated AI Sales Rep that knows your products, closes deals, and never sleeps.
           </p>
-          <div className="mt-12 grid grid-cols-3 gap-6 text-left">
-            <div>
-              <div className="text-2xl font-bold text-white mb-1">10K+</div>
-              <p className="text-blue-100 text-sm">Active Users</p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white mb-1">99.9%</div>
-              <p className="text-blue-100 text-sm">Uptime</p>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-white mb-1">24/7</div>
-              <p className="text-blue-100 text-sm">Support</p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -68,81 +54,47 @@ const Signup = () => {
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-10">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-              <Bot className="h-5 w-5 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Users className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg">AgentHub</span>
+            <span className="font-bold text-lg">AI Sales Rep</span>
           </div>
-          
+
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Create a new organization</h1>
-            <p className="text-gray-600">
-              Trying to join an existing organization?{" "}
-              <Link to="/login" className="text-blue-600 hover:underline font-medium">Sign in</Link>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Create your account</h1>
+            <p className="text-muted-foreground">
+              Already have an account?{" "}
+              <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link>
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                required 
-                placeholder="you@example.com"
-                className="h-10 border border-gray-300 rounded-lg"
-              />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="h-10" />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-semibold">Your name</Label>
-              <Input 
-                id="name" 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                placeholder="Jane Doe"
-                className="h-10 border border-gray-300 rounded-lg"
-              />
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" className="h-10" />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="organization" className="text-sm font-semibold">Organization name</Label>
-              <Input 
-                id="organization" 
-                value={organization} 
-                onChange={(e) => setOrganization(e.target.value)} 
-                placeholder="Acme Corp"
-                className="h-10 border border-gray-300 rounded-lg"
-              />
-              <p className="text-xs text-gray-500">You can always rename your organization later</p>
+              <Label htmlFor="business" className="text-sm font-semibold">Business name</Label>
+              <Input id="business" value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Store" className="h-10" />
+              <p className="text-xs text-muted-foreground">You can rename this later</p>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                required 
-                minLength={6} 
-                placeholder="••••••••"
-                className="h-10 border border-gray-300 rounded-lg"
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="••••••••" className="h-10" />
             </div>
-
-            <Button type="submit" className="w-full h-10 bg-blue-600 hover:bg-blue-700 mt-6" disabled={isLoading}>
-              {isLoading ? "Creating organization..." : "Create organization"}
+            <Button type="submit" className="w-full h-10 mt-4" disabled={isLoading}>
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-gray-500">
+          <p className="mt-6 text-center text-xs text-muted-foreground">
             By creating an account, you agree to our{" "}
-            <a href="#" className="text-blue-600 hover:underline">Terms of Service</a>
-            {" "}and{" "}
-            <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>
+            <a href="#" className="text-primary hover:underline">Terms</a> and{" "}
+            <a href="#" className="text-primary hover:underline">Privacy Policy</a>
           </p>
         </div>
       </div>

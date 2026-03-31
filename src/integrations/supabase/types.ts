@@ -315,7 +315,9 @@ export type Database = {
           ai_model: string
           ai_provider: string
           created_at: string
+          currency: string
           id: string
+          industry: string
           last_crawled_at: string | null
           name: string
           pages_crawled: number
@@ -329,7 +331,9 @@ export type Database = {
           ai_model?: string
           ai_provider?: string
           created_at?: string
+          currency?: string
           id?: string
+          industry?: string
           last_crawled_at?: string | null
           name: string
           pages_crawled?: number
@@ -343,7 +347,9 @@ export type Database = {
           ai_model?: string
           ai_provider?: string
           created_at?: string
+          currency?: string
           id?: string
+          industry?: string
           last_crawled_at?: string | null
           name?: string
           pages_crawled?: number

@@ -1,0 +1,3 @@
+
+ALTER TABLE public.sites ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'USD';
+ALTER TABLE public.sites ADD COLUMN IF NOT EXISTS industry text NOT NULL DEFAULT 'other';
