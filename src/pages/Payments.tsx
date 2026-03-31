@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, CreditCard, Loader2, Trash2, Shield } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCard, Loader2, Trash2, Building2, Clock } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { GatewayPaymentForm } from "@/components/payment/GatewayPaymentForm";
+import { ManualPaymentForm } from "@/components/payment/ManualPaymentForm";
+import { PaymentConfirmationCard } from "@/components/payment/PaymentConfirmationCard";
 
 const providerInfo: Record<string, { label: string; color: string }> = {
   paystack: { label: "Paystack", color: "bg-info/10 text-info border-info/20" },
@@ -20,9 +22,9 @@ const providerInfo: Record<string, { label: string; color: string }> = {
 const Payments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ site_id: "", provider: "paystack", public_key: "", secret_key: "" });
+  const [activeTab, setActiveTab] = useState("gateway");
 
+  // Fetch sites
   const { data: sites } = useQuery({
     queryKey: ["sites"],
     queryFn: async () => {
@@ -32,32 +34,48 @@ const Payments = () => {
     },
   });
 
-  const { data: configs, isLoading } = useQuery({
+  // Fetch gateway payment configs
+  const { data: configs, isLoading: configsLoading } = useQuery({
     queryKey: ["payment-configs"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("payment_configs").select("*, sites(name)").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("payment_configs")
+        .select("*, sites(name)")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  const addMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("payment_configs").insert({
-        site_id: form.site_id, provider: form.provider, public_key: form.public_key, secret_key: form.secret_key,
-      } as any);
+  // Fetch manual payment configs
+  const { data: manualConfigs, isLoading: manualLoading } = useQuery({
+    queryKey: ["manual-payment-configs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("manual_payment_config")
+        .select("*, sites(name)")
+        .order("created_at", { ascending: false });
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payment-configs"] });
-      setDialogOpen(false);
-      setForm({ site_id: "", provider: "paystack", public_key: "", secret_key: "" });
-      toast({ title: "Payment provider connected" });
-    },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const toggleMutation = useMutation({
+  // Fetch pending payment confirmations
+  const { data: paymentConfirmations, isLoading: confirmationsLoading } = useQuery({
+    queryKey: ["payment-confirmations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payment_confirmations")
+        .select("*, sites(name), orders(customer_name, customer_email, total_amount, payment_status)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Toggle gateway mutation
+  const toggleGatewayMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase.from("payment_configs").update({ is_active } as any).eq("id", id);
       if (error) throw error;
@@ -65,99 +83,239 @@ const Payments = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["payment-configs"] }),
   });
 
-  const deleteMutation = useMutation({
+  // Delete gateway mutation
+  const deleteGatewayMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("payment_configs").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["payment-configs"] }); toast({ title: "Provider removed" }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-configs"] });
+      toast({ title: "Provider removed" });
+    },
   });
 
+  // Delete manual config mutation
+  const deleteManualMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("manual_payment_config").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manual-payment-configs"] });
+      toast({ title: "Manual payment config removed" });
+    },
+  });
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["payment-confirmations"] });
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Payments</h1>
-          <p className="text-sm text-muted-foreground mt-1">Connect payment providers for in-chat checkout</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add provider</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Connect payment provider</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); addMutation.mutate(); }} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Sales Rep</Label>
-                <Select value={form.site_id} onValueChange={(v) => setForm((f) => ({ ...f, site_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select Sales Rep" /></SelectTrigger>
-                  <SelectContent>
-                    {sites?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Provider</Label>
-                <Select value={form.provider} onValueChange={(v) => setForm((f) => ({ ...f, provider: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="paystack">Paystack</SelectItem>
-                    <SelectItem value="flutterwave">Flutterwave</SelectItem>
-                    <SelectItem value="stripe">Stripe</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Public Key</Label>
-                <Input value={form.public_key} onChange={(e) => setForm((f) => ({ ...f, public_key: e.target.value }))} required placeholder="pk_..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Secret Key</Label>
-                <Input type="password" value={form.secret_key} onChange={(e) => setForm((f) => ({ ...f, secret_key: e.target.value }))} required placeholder="sk_..." />
-                <p className="text-xs text-muted-foreground flex items-center gap-1"><Shield className="h-3 w-3" /> Encrypted and stored securely</p>
-              </div>
-              <Button type="submit" className="w-full" disabled={addMutation.isPending || !form.site_id}>
-                {addMutation.isPending ? "Connecting..." : "Connect provider"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold">Payment Settings</h1>
+        <p className="text-muted-foreground mt-1">
+          Manage payment gateways and manual payment configurations
+        </p>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : !configs?.length ? (
-        <div className="border border-dashed rounded-lg flex flex-col items-center justify-center py-16 sm:py-20 px-4">
-          <CreditCard className="h-10 w-10 text-muted-foreground mb-4" />
-          <h3 className="font-medium mb-1">No payment providers</h3>
-          <p className="text-muted-foreground text-sm mb-4 text-center">Connect Paystack, Flutterwave, or Stripe</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {configs.map((config: any) => (
-            <div key={config.id} className="border rounded-lg p-3 sm:p-4 flex items-center justify-between hover:bg-muted/30 transition-colors gap-3">
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                  <CreditCard className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-sm">{providerInfo[config.provider]?.label || config.provider}</p>
-                    <Badge variant="outline" className={`text-[10px] ${providerInfo[config.provider]?.color || ""}`}>{config.provider}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate">{(config as any).sites?.name} · {config.public_key.slice(0, 12)}...</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <Switch checked={config.is_active} onCheckedChange={(checked) => toggleMutation.mutate({ id: config.id, is_active: checked })} />
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteMutation.mutate(config.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="gateway">Payment Gateways</TabsTrigger>
+          <TabsTrigger value="manual">Manual Payment</TabsTrigger>
+          <TabsTrigger value="confirmations">
+            Confirmations
+            {paymentConfirmations?.length ? (
+              <Badge variant="destructive" className="ml-2">
+                {paymentConfirmations.length}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Gateway Tab */}
+        <TabsContent value="gateway" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold">Payment Gateways</h2>
+              <p className="text-sm text-muted-foreground">
+                Connect Paystack, Flutterwave, or Stripe for automatic payments
+              </p>
             </div>
-          ))}
-        </div>
-      )}
+            <GatewayPaymentForm sites={sites || []} onSuccess={() => {}} />
+          </div>
+
+          {configsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : !configs?.length ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <h3 className="font-medium mb-1">No gateways connected</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Connect a payment gateway to enable in-checkout payments
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {configs.map((config: any) => (
+                <div
+                  key={config.id}
+                  className="border rounded-lg p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium">{providerInfo[config.provider]?.label || config.provider}</p>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${providerInfo[config.provider]?.color || ""}`}
+                        >
+                          {config.provider}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {(config as any).sites?.name} · {config.public_key.slice(0, 12)}...
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Switch
+                      checked={config.is_active}
+                      onCheckedChange={(checked) =>
+                        toggleGatewayMutation.mutate({ id: config.id, is_active: checked })
+                      }
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => deleteGatewayMutation.mutate(config.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Manual Payment Tab */}
+        <TabsContent value="manual" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold">Manual Payment Configuration</h2>
+              <p className="text-sm text-muted-foreground">
+                Add bank details for businesses without payment gateways
+              </p>
+            </div>
+            <ManualPaymentForm sites={sites || []} onSuccess={() => {}} />
+          </div>
+
+          {manualLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : !manualConfigs?.length ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <h3 className="font-medium mb-1">No manual payment configs</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add bank details to allow customers to pay via bank transfer
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {manualConfigs.map((config: any) => (
+                <Card key={config.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-base">{(config as any).sites?.name}</CardTitle>
+                        <CardDescription>{config.bank_name}</CardDescription>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => deleteManualMutation.mutate(config.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Account Name:</span>
+                      <span className="font-mono">{config.account_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Account Number:</span>
+                      <span className="font-mono font-semibold">{config.account_number}</span>
+                    </div>
+                    {config.instructions && (
+                      <div className="pt-2 mt-2 border-t">
+                        <p className="text-muted-foreground">{config.instructions}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Confirmations Tab */}
+        <TabsContent value="confirmations" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold">Pending Payment Confirmations</h2>
+              <p className="text-sm text-muted-foreground">
+                Review and confirm manual payment proofs from customers
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              Refresh
+            </Button>
+          </div>
+
+          {confirmationsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : !paymentConfirmations?.length ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <h3 className="font-medium mb-1">No pending confirmations</h3>
+                <p className="text-sm text-muted-foreground">
+                  All payment proofs have been reviewed
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {paymentConfirmations.map((confirmation: any) => (
+                <PaymentConfirmationCard
+                  key={confirmation.id}
+                  confirmation={confirmation}
+                  onSuccess={handleRefresh}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

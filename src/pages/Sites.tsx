@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink } from "lucide-react";
+import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink, Store, Copy } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const statusColors: Record<string, string> = {
@@ -62,12 +62,24 @@ const AI_MODELS: Record<string, { label: string; models: { value: string; label:
   },
 };
 
+// Helper function to generate URL-friendly slug
+const generateSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]/g, "")
+    .replace(/-+/g, "-")
+    .substring(0, 50);
+};
+
 const Sites = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newSiteName, setNewSiteName] = useState("");
   const [newSiteUrl, setNewSiteUrl] = useState("");
+  const [newSlug, setNewSlug] = useState("");
   const [newProvider, setNewProvider] = useState("openai");
   const [newModel, setNewModel] = useState("gpt-4o-mini");
   const [newIndustry, setNewIndustry] = useState("other");
@@ -88,6 +100,7 @@ const Sites = () => {
       const { error } = await supabase.from("sites").insert({
         name: newSiteName,
         url: newSiteUrl,
+        slug: newSlug || generateSlug(newSiteName),
         user_id: user!.id,
         ai_provider: newProvider,
         ai_model: newModel,
@@ -98,8 +111,13 @@ const Sites = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sites"] });
-      setNewSiteName(""); setNewSiteUrl(""); setNewProvider("openai"); setNewModel("gpt-4o-mini");
-      setNewIndustry("other"); setNewCurrency("USD");
+      setNewSiteName("");
+      setNewSiteUrl("");
+      setNewSlug("");
+      setNewProvider("openai");
+      setNewModel("gpt-4o-mini");
+      setNewIndustry("other");
+      setNewCurrency("USD");
       setDialogOpen(false);
       toast({ title: "Sales Rep created", description: "Crawl the site to train your AI Sales Rep." });
     },
@@ -131,6 +149,12 @@ const Sites = () => {
     },
   });
 
+  const copyLandingPageUrl = (slug: string) => {
+    const url = `${window.location.origin}/store/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "Landing page URL copied to clipboard" });
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
@@ -144,21 +168,66 @@ const Sites = () => {
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Deploy a new AI Sales Rep</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); addSiteMutation.mutate(); }} className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addSiteMutation.mutate();
+              }}
+              className="space-y-4"
+            >
               <div className="space-y-2">
                 <Label>Business name</Label>
-                <Input value={newSiteName} onChange={(e) => setNewSiteName(e.target.value)} required placeholder="My Business" />
+                <Input
+                  value={newSiteName}
+                  onChange={(e) => {
+                    setNewSiteName(e.target.value);
+                    setNewSlug(generateSlug(e.target.value));
+                  }}
+                  required
+                  placeholder="My Business"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Landing page URL slug</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newSlug}
+                    onChange={(e) => setNewSlug(generateSlug(e.target.value))}
+                    placeholder="my-business"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setNewSlug(generateSlug(newSiteName))}
+                  >
+                    Auto
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {newSlug ? `Your landing page: /store/${newSlug}` : "Enter a name to auto-generate"}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Website URL</Label>
-                <Input value={newSiteUrl} onChange={(e) => setNewSiteUrl(e.target.value)} required placeholder="https://example.com" />
+                <Input
+                  value={newSiteUrl}
+                  onChange={(e) => setNewSiteUrl(e.target.value)}
+                  required
+                  placeholder="https://example.com"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Industry</Label>
                 <Select value={newIndustry} onValueChange={setNewIndustry}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {INDUSTRIES.map((i) => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
+                    {INDUSTRIES.map((i) => (
+                      <SelectItem key={i.value} value={i.value}>
+                        {i.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -167,14 +236,24 @@ const Sites = () => {
                 <Select value={newCurrency} onValueChange={setNewCurrency}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CURRENCIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>AI Provider</Label>
-                  <Select value={newProvider} onValueChange={(v) => { setNewProvider(v); setNewModel(AI_MODELS[v].models[0].value); }}>
+                  <Select
+                    value={newProvider}
+                    onValueChange={(v) => {
+                      setNewProvider(v);
+                      setNewModel(AI_MODELS[v].models[0].value);
+                    }}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="openai">OpenAI</SelectItem>
@@ -188,7 +267,9 @@ const Sites = () => {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {AI_MODELS[newProvider].models.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -203,20 +284,27 @@ const Sites = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
       ) : !sites?.length ? (
         <div className="border border-dashed rounded-lg flex flex-col items-center justify-center py-16 sm:py-20 px-4">
           <Globe className="h-10 w-10 text-muted-foreground mb-4" />
           <h3 className="font-medium mb-1">No Sales Reps deployed</h3>
-          <p className="text-muted-foreground text-sm mb-4 text-center">Deploy your first AI Sales Rep to start converting visitors</p>
-          <Button size="sm" onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" /> New Sales Rep</Button>
+          <p className="text-muted-foreground text-sm mb-4 text-center">
+            Deploy your first AI Sales Rep to start converting visitors
+          </p>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> New Sales Rep
+          </Button>
         </div>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
-          <table className="w-full text-sm min-w-[500px]">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left font-medium text-muted-foreground px-4 py-3">Business</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Landing Page</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Industry</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Status</th>
                 <th className="text-right font-medium text-muted-foreground px-4 py-3">Actions</th>
@@ -234,30 +322,90 @@ const Sites = () => {
                       </p>
                     </div>
                   </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    {site.slug ? (
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs bg-muted px-2 py-1 rounded">{site.slug}</code>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => (site as any).slug && copyLandingPageUrl((site as any).slug)}
+                          title="Copy landing page URL"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Not set</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <Badge variant="outline" className="text-xs capitalize">
                       {((site as any).industry || "other").replace("_", " ")}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
-                    <Badge className={statusColors[site.status] || ""} variant="outline">{site.status}</Badge>
+                    <Badge className={statusColors[site.status] || ""} variant="outline">
+                      {site.status}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1 justify-end flex-wrap">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => crawlMutation.mutate(site.id)} disabled={crawlMutation.isPending || site.status === "crawling"} title="Train">
-                        {site.status === "crawling" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => crawlMutation.mutate(site.id)}
+                        disabled={crawlMutation.isPending || site.status === "crawling"}
+                        title="Train"
+                      >
+                        {site.status === "crawling" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3.5 w-3.5" />
+                        )}
                       </Button>
+                      {site.slug && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          asChild
+                          title="Landing Page"
+                        >
+                          <a href={`/store/${site.slug}`} target="_blank" rel="noopener noreferrer">
+                            <Store className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      )}
                       {site.status === "ready" && (
                         <>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Test">
-                            <Link to={`/chat/${site.id}`}><MessageSquare className="h-3.5 w-3.5" /></Link>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            asChild
+                            title="Test"
+                          >
+                            <Link to={`/chat/${site.id}`}>
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </Link>
                           </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Embed">
-                            <Link to={`/embed/${site.id}`}><Code className="h-3.5 w-3.5" /></Link>
+                            <Link to={`/embed/${site.id}`}>
+                              <Code className="h-3.5 w-3.5" />
+                            </Link>
                           </Button>
                         </>
                       )}
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteMutation.mutate(site.id)} title="Delete">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(site.id)}
+                        title="Delete"
+                      >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>

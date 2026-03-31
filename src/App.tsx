@@ -17,6 +17,7 @@ import Conversations from "./pages/Conversations";
 import ChatTest from "./pages/ChatTest";
 import EmbedCode from "./pages/EmbedCode";
 import ChatWidget from "./pages/ChatWidget";
+import Store from "./pages/Store";
 import Docs from "./pages/Docs";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+            <Route path="/store/:slug" element={<Store />} />
             <Route path="/dashboard" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
             <Route path="/sites" element={<ProtectedRoute><Sites /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
