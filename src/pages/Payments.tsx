@@ -44,10 +44,7 @@ const Payments = () => {
   const addMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("payment_configs").insert({
-        site_id: form.site_id,
-        provider: form.provider,
-        public_key: form.public_key,
-        secret_key: form.secret_key,
+        site_id: form.site_id, provider: form.provider, public_key: form.public_key, secret_key: form.secret_key,
       } as any);
       if (error) throw error;
     },
@@ -73,32 +70,27 @@ const Payments = () => {
       const { error } = await supabase.from("payment_configs").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payment-configs"] });
-      toast({ title: "Payment provider removed" });
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["payment-configs"] }); toast({ title: "Provider removed" }); },
   });
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
-          <p className="text-sm text-muted-foreground mt-1">Connect payment providers to accept in-chat payments</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Payments</h1>
+          <p className="text-sm text-muted-foreground mt-1">Connect payment providers for in-chat checkout</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add provider</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Connect payment provider</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Connect payment provider</DialogTitle></DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); addMutation.mutate(); }} className="space-y-4">
               <div className="space-y-2">
-                <Label>Site</Label>
+                <Label>Sales Rep</Label>
                 <Select value={form.site_id} onValueChange={(v) => setForm((f) => ({ ...f, site_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select Sales Rep" /></SelectTrigger>
                   <SelectContent>
                     {sites?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
@@ -122,9 +114,7 @@ const Payments = () => {
               <div className="space-y-2">
                 <Label>Secret Key</Label>
                 <Input type="password" value={form.secret_key} onChange={(e) => setForm((f) => ({ ...f, secret_key: e.target.value }))} required placeholder="sk_..." />
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Shield className="h-3 w-3" /> Encrypted and stored securely
-                </p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Shield className="h-3 w-3" /> Encrypted and stored securely</p>
               </div>
               <Button type="submit" className="w-full" disabled={addMutation.isPending || !form.site_id}>
                 {addMutation.isPending ? "Connecting..." : "Connect provider"}
@@ -137,34 +127,29 @@ const Payments = () => {
       {isLoading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : !configs?.length ? (
-        <div className="border border-dashed rounded-lg flex flex-col items-center justify-center py-20">
+        <div className="border border-dashed rounded-lg flex flex-col items-center justify-center py-16 sm:py-20 px-4">
           <CreditCard className="h-10 w-10 text-muted-foreground mb-4" />
           <h3 className="font-medium mb-1">No payment providers</h3>
-          <p className="text-muted-foreground text-sm mb-4">Connect Paystack, Flutterwave, or Stripe to accept payments</p>
+          <p className="text-muted-foreground text-sm mb-4 text-center">Connect Paystack, Flutterwave, or Stripe</p>
         </div>
       ) : (
         <div className="space-y-3">
           {configs.map((config: any) => (
-            <div key={config.id} className="border rounded-lg p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
+            <div key={config.id} className="border rounded-lg p-3 sm:p-4 flex items-center justify-between hover:bg-muted/30 transition-colors gap-3">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center shrink-0">
                   <CreditCard className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-sm">{providerInfo[config.provider]?.label || config.provider}</p>
-                    <Badge variant="outline" className={providerInfo[config.provider]?.color || ""}>
-                      {config.provider}
-                    </Badge>
+                    <Badge variant="outline" className={`text-[10px] ${providerInfo[config.provider]?.color || ""}`}>{config.provider}</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">{(config as any).sites?.name} · {config.public_key.slice(0, 12)}...</p>
+                  <p className="text-xs text-muted-foreground truncate">{(config as any).sites?.name} · {config.public_key.slice(0, 12)}...</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={config.is_active}
-                  onCheckedChange={(checked) => toggleMutation.mutate({ id: config.id, is_active: checked })}
-                />
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <Switch checked={config.is_active} onCheckedChange={(checked) => toggleMutation.mutate({ id: config.id, is_active: checked })} />
                 <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => deleteMutation.mutate(config.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
