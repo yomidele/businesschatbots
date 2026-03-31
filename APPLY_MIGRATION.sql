@@ -72,3 +72,41 @@ CREATE POLICY "Users can manage payment confirmations they reviewed" ON public.p
 
 CREATE TRIGGER update_payment_confirmations_updated_at BEFORE UPDATE ON public.payment_confirmations
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Create landing_pages table for generated landing pages
+CREATE TABLE IF NOT EXISTS public.landing_pages (
+  id TEXT NOT NULL PRIMARY KEY,
+  site_id UUID NOT NULL REFERENCES public.sites(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  html_content TEXT NOT NULL,
+  theme TEXT NOT NULL DEFAULT 'modern' CHECK (theme IN ('modern', 'classic', 'minimal')),
+  cta_type TEXT NOT NULL DEFAULT 'buy' CHECK (cta_type IN ('buy', 'contact', 'book')),
+  products_used JSONB,
+  business_name TEXT,
+  url_slug TEXT,
+  is_published BOOLEAN DEFAULT true,
+  view_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.landing_pages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own landing pages" ON public.landing_pages
+  FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM sites WHERE sites.id = landing_pages.site_id AND sites.user_id = auth.uid()));
+
+CREATE POLICY "Service role full access landing_pages" ON public.landing_pages
+  FOR ALL TO service_role USING (true);
+
+CREATE POLICY "Public can view published landing pages" ON public.landing_pages
+  FOR SELECT TO public
+  USING (is_published = true);
+
+CREATE TRIGGER update_landing_pages_updated_at BEFORE UPDATE ON public.landing_pages
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Create index for faster landing page lookups
+CREATE INDEX IF NOT EXISTS idx_landing_pages_site_id ON public.landing_pages(site_id);
+CREATE INDEX IF NOT EXISTS idx_landing_pages_created_at ON public.landing_pages(created_at DESC);
