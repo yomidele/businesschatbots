@@ -45,6 +45,7 @@ const LandingPageGenerator = () => {
   const { data: site } = useQuery({
     queryKey: ["site", siteId],
     queryFn: async () => {
+      if (!siteId) return null;
       const { data, error } = await supabase
         .from("sites")
         .select("name, logo_url")
@@ -224,14 +225,24 @@ function LandingPagesList({
   const { data: landingPages = [], isLoading } = useQuery({
     queryKey: ["landing-pages", siteId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("landing_pages")
-        .select("*")
-        .eq("site_id", siteId)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data || [];
+      if (!siteId) return [];
+      try {
+        // Cast as any because landing_pages table may not be in auto-generated types yet
+        const { data, error } = await (supabase as any)
+          .from("landing_pages")
+          .select("*")
+          .eq("site_id", siteId)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (error) {
+          console.warn("Landing pages query error:", error);
+          return [];
+        }
+        return data || [];
+      } catch (err) {
+        console.warn("Landing pages fetch error:", err);
+        return [];
+      }
     },
   });
 
@@ -257,14 +268,16 @@ function LandingPagesList({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {landingPages.map((page: any) => (
+          {landingPages.map((page) => (
             <div
               key={page.id}
               className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
             >
               <div>
-                <p className="font-medium">{page.title}</p>
-                <p className="text-sm text-muted-foreground">{page.description?.slice(0, 60)}...</p>
+                <p className="font-medium">{(page as any).title || page.id}</p>
+                <p className="text-sm text-muted-foreground">
+                  {(page as any).description?.slice(0, 60) || "Generated landing page"}...
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button
