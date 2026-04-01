@@ -152,6 +152,19 @@ serve(async (req) => {
     const { data: chunks } = await supabase.rpc("search_knowledge", { p_site_id: siteId, p_query: query, p_limit: 5 });
     const { data: products } = await supabase.from("products").select("name, description, price, image_url, category, stock").eq("site_id", siteId).limit(20);
 
+    // Fetch manual payment config for context
+    const { data: manualPayConfig } = await supabase
+      .from("manual_payment_config")
+      .select("bank_name, account_name, account_number, instructions")
+      .eq("site_id", siteId)
+      .single();
+
+    // Fetch payment links (fallback) for this site
+    const { data: paymentLinks } = await supabase
+      .from("payment_links")
+      .select("amount, link, label")
+      .eq("site_id", siteId);
+
     // Check for payment intent
     const paymentIntent = detectPaymentIntent(messages);
     let paymentContext = "";
@@ -170,6 +183,7 @@ serve(async (req) => {
       }
 
       if (matchedProduct?.price) {
+        // First try payment gateway
         const result = await generatePaymentLink(
           supabase, siteId,
           paymentIntent.email,
@@ -195,13 +209,66 @@ Payment URL: ${result.url}
 
 INSTRUCTION: Show the customer this EXACT payment link. Tell them to click the link to complete payment securely. Format it as: [Complete Payment](${result.url})`;
         } else {
-          paymentContext = `\n\n⚠️ PAYMENT GENERATION FAILED: ${result.error}. Tell the customer payment is temporarily unavailable and ask them to try again shortly.`;
+          // FALLBACK: Try payment_links table
+          let fallbackLink: any = null;
+          if (paymentLinks?.length) {
+            fallbackLink = paymentLinks.find((pl: any) => Number(pl.amount) === Number(matchedProduct.price));
+            if (!fallbackLink) {
+              // Find closest match
+              fallbackLink = paymentLinks.reduce((closest: any, pl: any) => {
+                if (!closest) return pl;
+                return Math.abs(Number(pl.amount) - matchedProduct.price) < Math.abs(Number(closest.amount) - matchedProduct.price) ? pl : closest;
+              }, null);
+            }
+          }
+
+          if (fallbackLink?.link) {
+            await supabase.from("orders").insert({
+              site_id: siteId,
+              customer_name: paymentIntent.name || "Customer",
+              customer_email: paymentIntent.email,
+              total_amount: matchedProduct.price,
+              payment_status: "pending",
+              conversation_id: activeConvoId,
+            });
+
+            paymentContext = `\n\n🔗 PAYMENT LINK (FALLBACK - from database):
+Product: ${matchedProduct.name}
+Amount: ${site.currency || "USD"} ${matchedProduct.price}
+Payment URL: ${fallbackLink.link}
+
+INSTRUCTION: Show the customer this EXACT payment link. Format it as: [Complete Payment](${fallbackLink.link})`;
+          } else if (manualPayConfig) {
+            // FALLBACK 2: Show manual bank payment
+            paymentContext = `\n\n🏦 MANUAL PAYMENT DETAILS (REAL - from database):
+Product: ${matchedProduct.name}
+Amount: ${site.currency || "USD"} ${matchedProduct.price}
+Bank: ${manualPayConfig.bank_name}
+Account Name: ${manualPayConfig.account_name}
+Account Number: ${manualPayConfig.account_number}
+${manualPayConfig.instructions ? `Instructions: ${manualPayConfig.instructions}` : ""}
+
+INSTRUCTION: Show the customer these EXACT bank details. Ask them to make a transfer and send proof of payment.`;
+          } else {
+            paymentContext = `\n\n⚠️ Payment link for this amount is unavailable. No payment method is configured. Tell the customer: "Payment is currently unavailable. Please contact us directly."`;
+          }
         }
       } else if (!matchedProduct) {
         paymentContext = "\n\n⚠️ Could not identify which product the customer wants to buy. Ask the customer to specify the exact product name.";
       }
     } else if (paymentIntent.isPayment && !paymentIntent.email) {
       paymentContext = "\n\n⚠️ Customer wants to pay but hasn't provided their email. You MUST ask for their email address before processing payment.";
+    }
+
+    // Add manual payment context if available (for general queries about payment)
+    let manualPaymentContext = "";
+    if (manualPayConfig && !paymentContext.includes("MANUAL PAYMENT")) {
+      manualPaymentContext = `\n\nMANUAL PAYMENT OPTION AVAILABLE:
+Bank: ${manualPayConfig.bank_name}
+Account Name: ${manualPayConfig.account_name}
+Account Number: ${manualPayConfig.account_number}
+${manualPayConfig.instructions ? `Instructions: ${manualPayConfig.instructions}` : ""}
+NOTE: Only share these details when customer asks about payment methods or bank transfer. Use ONLY these real values.`; 
     }
 
     // Build context
@@ -242,7 +309,8 @@ SALES BEHAVIOR:
 WEBSITE KNOWLEDGE:
 ${knowledgeContext || "No specific knowledge available."}
 ${productContext || "No products catalogued yet."}
-${paymentContext}`;
+${paymentContext}
+${manualPaymentContext}`;
 
     // Store user message
     if (activeConvoId && lastUserMsg) {
