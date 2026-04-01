@@ -67,7 +67,12 @@ const Products = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const siteId = selectedSiteId === "all" ? sites?.[0]?.id : selectedSiteId;
+      // When editing, always use the product's original site_id
+      const siteId = editProduct
+        ? editProduct.site_id
+        : selectedSiteId === "all"
+          ? sites?.[0]?.id
+          : selectedSiteId;
       if (!siteId) throw new Error("Please select a Sales Rep first");
 
       let finalImageUrl = form.image_url;
@@ -77,13 +82,16 @@ const Products = () => {
         setUploading(true);
         try {
           finalImageUrl = await uploadImage(imageFile, siteId);
-        } finally {
+        } catch (uploadErr: any) {
           setUploading(false);
+          throw new Error(`Image upload failed: ${uploadErr.message}`);
         }
+        setUploading(false);
       }
 
-      const payload = {
-        site_id: siteId,
+      if (!form.name.trim()) throw new Error("Product name is required");
+
+      const payload: Record<string, any> = {
         name: form.name,
         description: form.description || null,
         price: form.price ? parseFloat(form.price) : null,
@@ -94,10 +102,11 @@ const Products = () => {
 
       if (editProduct) {
         const { error } = await supabase.from("products").update(payload).eq("id", editProduct.id);
-        if (error) throw error;
+        if (error) throw new Error(`Update failed: ${error.message}`);
       } else {
+        payload.site_id = siteId;
         const { error } = await supabase.from("products").insert(payload as any);
-        if (error) throw error;
+        if (error) throw new Error(`Insert failed: ${error.message}`);
       }
     },
     onSuccess: () => {
