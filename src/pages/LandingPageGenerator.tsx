@@ -82,12 +82,17 @@ const LandingPageGenerator = () => {
 
       const site = sites?.find(s => s.id === selectedSiteId);
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
       const response = await fetch(
         `${supabaseUrl}/functions/v1/generate-landing-page`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseKey}`,
+            "apikey": supabaseKey,
+          },
           body: JSON.stringify({
             site_id: selectedSiteId,
             business_name: businessName || site?.name || "My Business",
