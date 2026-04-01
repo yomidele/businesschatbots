@@ -16,7 +16,8 @@ const navItems = [
   { to: "/orders", icon: ShoppingCart, label: "Orders" },
   { to: "/conversations", icon: MessageSquare, label: "Conversations" },
   { to: "/payments", icon: CreditCard, label: "Payments" },
-  { to: "/docs", icon: FileText, label: "How to Use" },
+  { to: "/landing-pages", icon: FileText, label: "Landing Pages" },
+  { to: "/docs", icon: Settings, label: "How to Use" },
 ];
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {

@@ -19,6 +19,7 @@ import EmbedCode from "./pages/EmbedCode";
 import ChatWidget from "./pages/ChatWidget";
 import Store from "./pages/Store";
 import Docs from "./pages/Docs";
+import LandingPageGenerator from "./pages/LandingPageGenerator";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
             <Route path="/conversations" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
+            <Route path="/landing-pages" element={<ProtectedRoute><LandingPageGenerator /></ProtectedRoute>} />
             <Route path="/chat/:siteId" element={<ProtectedRoute withLayout={false}><ChatTest /></ProtectedRoute>} />
             <Route path="/embed/:siteId" element={<ProtectedRoute><EmbedCode /></ProtectedRoute>} />
             <Route path="/docs" element={<ProtectedRoute><Docs /></ProtectedRoute>} />
