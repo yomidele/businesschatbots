@@ -393,6 +393,41 @@ export type Database = {
           },
         ]
       }
+      payment_links: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          label: string | null
+          link: string
+          site_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          link: string
+          site_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          link?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_links_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
