@@ -111,6 +111,133 @@ function getProviderOrder(preferredProvider: string, prioritizeCheckout: boolean
     .filter(Boolean) as typeof PROVIDERS;
 }
 
+function normalizeText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function replaceNumberWords(value: string) {
+  const map: Record<string, string> = {
+    one: "1",
+    two: "2",
+    three: "3",
+    four: "4",
+    five: "5",
+    six: "6",
+    seven: "7",
+    eight: "8",
+    nine: "9",
+    ten: "10",
+  };
+
+  return value.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/gi, (match) => map[match.toLowerCase()] || match);
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildProductAliases(productName: string) {
+  const normalized = normalizeText(productName);
+  const aliases = new Set([normalized]);
+
+  if (normalized.endsWith("s")) aliases.add(normalized.slice(0, -1));
+
+  const words = normalized.split(" ").filter(Boolean);
+  if (words.length > 1) {
+    const last = words[words.length - 1];
+    if (last.endsWith("s")) aliases.add([...words.slice(0, -1), last.slice(0, -1)].join(" "));
+  }
+
+  return Array.from(aliases).sort((a, b) => b.length - a.length);
+}
+
+function extractCustomerName(userMessages: string[], email: string | null) {
+  for (let index = userMessages.length - 1; index >= 0; index -= 1) {
+    const message = userMessages[index];
+    if (email && message.includes(email)) {
+      const withoutEmail = message.replace(email, " ");
+      const cleaned = withoutEmail
+        .replace(/\b(my name is|i am|i'm|name is)\b/gi, " ")
+        .replace(/[^a-zA-Z\s'-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (cleaned.split(" ").filter(Boolean).length >= 2) return cleaned;
+    }
+  }
+
+  for (let index = userMessages.length - 1; index >= 0; index -= 1) {
+    const message = userMessages[index];
+    const match = message.match(/(?:my name is|i am|i'm|name is)\s+([a-zA-Z][a-zA-Z\s'-]{2,60})/i);
+    if (match?.[1]) return match[1].trim();
+  }
+
+  return null;
+}
+
+function extractStructuredOrderFromMessages(messages: any[], products: any[]) {
+  const userMessages = messages
+    .filter((message: any) => message?.role === "user")
+    .slice(-6)
+    .map((message: any) => String(message.content || ""));
+
+  const combined = replaceNumberWords(userMessages.join(" \n "));
+  const normalized = normalizeText(combined);
+  const email = combined.match(EMAIL_REGEX)?.[0] || null;
+  const customerName = extractCustomerName(userMessages, email);
+
+  const items: CartItem[] = [];
+
+  for (const product of products) {
+    const aliases = buildProductAliases(product.name || "");
+    let quantity = 0;
+
+    for (const alias of aliases) {
+      const pattern = new RegExp(`(?:^|\\b)(\\d+)\\s*(?:x\\s*)?(?:boxes?\\s+of\\s+|box(?:es)?\\s+of\\s+)?${escapeRegex(alias)}(?:\\b|$)`, "i");
+      const match = normalized.match(pattern);
+      if (match?.[1]) {
+        quantity = Number(match[1]);
+        break;
+      }
+    }
+
+    if (quantity > 0 && typeof product.price === "number") {
+      items.push({
+        name: product.name,
+        unit_price: Number(product.price),
+        quantity,
+        total_price: Number(product.price) * quantity,
+      });
+    }
+  }
+
+  if (!items.length || !email || !customerName) return null;
+
+  return { items, customerEmail: email, customerName };
+}
+
+function buildCheckoutResponse(checkoutResult: { success: boolean; data?: any; error?: string }, cartItems: CartItem[], currencySymbol: string) {
+  const totalAmount = cartItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+  const orderSummary = cartItems
+    .map((item) => `• ${item.quantity}x ${item.name} — ${currencySymbol}${(item.unit_price * item.quantity).toLocaleString()}`)
+    .join("\n");
+
+  if (checkoutResult.success && checkoutResult.data) {
+    const data = checkoutResult.data;
+
+    if (data.type === "gateway" && data.payment_link) {
+      return `Great! Here's your order summary:\n\n${orderSummary}\n\n**Total: ${currencySymbol}${totalAmount.toLocaleString()}**\n\nClick below to complete your payment securely:\n\n[✅ Complete Payment — ${currencySymbol}${totalAmount.toLocaleString()}](${data.payment_link})\n\nReference: ${data.reference}`;
+    }
+
+    if (data.type === "manual" && data.bank_details) {
+      return `Here's your order summary:\n\n${orderSummary}\n\n**Total: ${currencySymbol}${totalAmount.toLocaleString()}**\n\nPlease make a bank transfer to:\n🏦 **${data.bank_details.bank_name}**\n📋 Account: **${data.bank_details.account_number}**\n👤 Name: **${data.bank_details.account_name}**\n\nReference: ${data.reference}\n${data.bank_details.instructions ? `\n${data.bank_details.instructions}` : ""}\n\nPlease send proof of payment after transferring.`;
+    }
+
+    return `Order created! Summary:\n\n${orderSummary}\n\n**Total: ${currencySymbol}${totalAmount.toLocaleString()}**\n\nPayment is being processed. Reference: ${data.reference}`;
+  }
+
+  return `I've prepared your order:\n\n${orderSummary}\n\n**Total: ${currencySymbol}${totalAmount.toLocaleString()}**\n\nHowever, ${checkoutResult.error || "payment is currently unavailable"}. Please try again shortly or contact us directly.`;
+}
+
 /**
  * Extract structured cart intent from conversation using AI function calling
  */
@@ -363,23 +490,30 @@ ${manualPaymentContext}`;
         activeConvoId,
       );
 
-      // Build the response message
-      let responseMsg = "";
-      const totalAmount = cartItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-      const orderSummary = cartItems.map(i => `• ${i.quantity}x ${i.name} — ${sym}${(i.unit_price * i.quantity).toLocaleString()}`).join("\n");
+      const responseMsg = buildCheckoutResponse(checkoutResult, cartItems, sym);
 
-      if (checkoutResult.success && checkoutResult.data) {
-        const d = checkoutResult.data;
-        if (d.type === "gateway" && d.payment_link) {
-          responseMsg = `Great! Here's your order summary:\n\n${orderSummary}\n\n**Total: ${sym}${totalAmount.toLocaleString()}**\n\nClick below to complete your payment securely:\n\n[✅ Complete Payment — ${sym}${totalAmount.toLocaleString()}](${d.payment_link})\n\nReference: ${d.reference}`;
-        } else if (d.type === "manual" && d.bank_details) {
-          responseMsg = `Here's your order summary:\n\n${orderSummary}\n\n**Total: ${sym}${totalAmount.toLocaleString()}**\n\nPlease make a bank transfer to:\n🏦 **${d.bank_details.bank_name}**\n📋 Account: **${d.bank_details.account_number}**\n👤 Name: **${d.bank_details.account_name}**\n\nReference: ${d.reference}\n${d.bank_details.instructions ? `\n${d.bank_details.instructions}` : ""}\n\nPlease send proof of payment after transferring.`;
-        } else {
-          responseMsg = `Order created! Summary:\n\n${orderSummary}\n\n**Total: ${sym}${totalAmount.toLocaleString()}**\n\nPayment is being processed. Reference: ${d.reference}`;
-        }
-      } else {
-        responseMsg = `I've prepared your order:\n\n${orderSummary}\n\n**Total: ${sym}${totalAmount.toLocaleString()}**\n\nHowever, ${checkoutResult.error || "payment is currently unavailable"}. Please try again shortly or contact us directly.`;
+      if (activeConvoId) {
+        await supabase.from("chat_messages").insert({ conversation_id: activeConvoId, role: "assistant", content: responseMsg });
       }
+
+      return new Response(JSON.stringify({ reply: responseMsg, conversationId: activeConvoId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const fallbackOrder = !toolCall && checkoutIntent ? extractStructuredOrderFromMessages(messages, products) : null;
+
+    if (fallbackOrder) {
+      const checkoutResult = await callDynamicCheckout(
+        supabase,
+        siteId,
+        fallbackOrder.items,
+        fallbackOrder.customerEmail,
+        fallbackOrder.customerName,
+        activeConvoId,
+      );
+
+      const responseMsg = buildCheckoutResponse(checkoutResult, fallbackOrder.items, sym);
 
       if (activeConvoId) {
         await supabase.from("chat_messages").insert({ conversation_id: activeConvoId, role: "assistant", content: responseMsg });
@@ -406,9 +540,17 @@ ${manualPaymentContext}`;
     // If we already have a non-streamed content, just return it
     if (choice?.message?.content) {
       let content = choice.message.content;
+      const shouldStream = !checkoutIntent && !containsInvalidCheckoutLink(content);
 
       if (checkoutIntent && containsInvalidCheckoutLink(content)) {
         content = "I couldn't generate a secure checkout link yet. Please confirm the exact items, your full name, and your email address, and I'll create the real payment link for you.";
+      }
+
+      if (!shouldStream) {
+        if (activeConvoId) await supabase.from("chat_messages").insert({ conversation_id: activeConvoId, role: "assistant", content });
+        return new Response(JSON.stringify({ reply: content, conversationId: activeConvoId }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       // Check if non-tool-calling provider — stream for UX
