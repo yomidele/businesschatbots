@@ -3,7 +3,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Users, User, Loader2 } from "lucide-react";
+import { Send, Users, User, Loader2, AlertTriangle } from "lucide-react";
+import { sanitizeChatMessage, detectPromptInjection, checkRateLimit } from "@/lib/security";
+import { logSecurityEvent } from "@/lib/security-logger";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -48,7 +50,21 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return;
-    const userMsg: Msg = { role: "user", content: input.trim() };
+
+    // Client-side rate limiting (30 msgs/min)
+    if (!checkRateLimit(`chat_${siteId}`, 30, 60_000)) {
+      logSecurityEvent("rate_limited", { siteId });
+      setMessages((prev) => [...prev, { role: "assistant", content: "You're sending messages too quickly. Please wait a moment. ⏳" }]);
+      return;
+    }
+
+    // Client-side injection pre-filter (logged, but still sent — server handles blocking)
+    if (detectPromptInjection(input)) {
+      logSecurityEvent("prompt_injection_detected", { siteId, snippet: input.slice(0, 80) });
+    }
+
+    const sanitized = sanitizeChatMessage(input.trim());
+    const userMsg: Msg = { role: "user", content: sanitized };
     setInput("");
     setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);

@@ -33,21 +33,27 @@ const ProductForm = ({ onSuccess, onCancel }: ProductFormProps) => {
   // Upload image mutation
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formDataObj = new FormData();
-      formDataObj.append("file", file);
-      formDataObj.append("site_id", siteId!);
+      const fileExt = file.name.split(".").pop();
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substr(2, 9);
+      const fileName = `${siteId}/${timestamp}_${random}.${fileExt}`;
 
-      const response = await fetch("/functions/v1/upload-product-image", {
-        method: "POST",
-        body: formDataObj,
-      });
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(fileName, file, {
+          contentType: file.type,
+          cacheControl: "3600",
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to upload image");
+      if (uploadError) {
+        throw new Error(uploadError.message);
       }
 
-      return response.json();
+      const { data: urlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(fileName);
+
+      return { image_url: urlData.publicUrl };
     },
     onSuccess: (data) => {
       setImageUrl(data.image_url);
