@@ -207,8 +207,16 @@ serve(async (req) => {
         console.error("Paystack error:", data);
         // Update order to failed
         await supabase.from("orders").update({ payment_status: "failed" }).eq("id", order.id);
-        return new Response(JSON.stringify({ error: "Payment provider error", details: data.message }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        const providerMessage = typeof data.message === "string" ? data.message : "Unable to initialize payment";
+        const isCurrencyMismatch = providerMessage.toLowerCase().includes("currency not supported");
+
+        return new Response(JSON.stringify({
+          error: isCurrencyMismatch
+            ? `The selected currency (${currency}) is not supported by this Paystack account`
+            : "Payment provider error",
+          details: providerMessage,
+        }), {
+          status: isCurrencyMismatch ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     } else if (paymentConfig.provider === "flutterwave") {
