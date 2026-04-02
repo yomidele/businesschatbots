@@ -9,7 +9,10 @@ const corsHeaders = {
 const PROVIDERS = [
   { name: "openai", url: "https://api.openai.com/v1/chat/completions", envKey: "OPENAI_API_KEY" },
   { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions", envKey: "GROQ_API_KEY" },
+  { name: "together", url: "https://api.together.xyz/v1/chat/completions", envKey: "TOGETHERAI_API_KEY" },
 ];
+
+const EMAIL_REGEX = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 
 interface CartItem {
   name: string;
@@ -50,12 +53,62 @@ async function callDynamicCheckout(
     });
 
     const data = await resp.json();
-    if (!resp.ok) return { success: false, error: data.error || "Payment service error" };
+    if (!resp.ok) {
+      const detail = [data.error, data.details].filter(Boolean).join(": ");
+      return { success: false, error: detail || "Payment service error" };
+    }
     return { success: true, data };
   } catch (e) {
     console.error("Dynamic checkout error:", e);
     return { success: false, error: "Payment service unavailable" };
   }
+}
+
+function isLikelyCheckoutIntent(messages: any[], products: any[]) {
+  const recentUserText = messages
+    .filter((message: any) => message?.role === "user")
+    .slice(-4)
+    .map((message: any) => String(message.content || ""))
+    .join(" \n ")
+    .toLowerCase();
+
+  const hasEmail = EMAIL_REGEX.test(recentUserText);
+  const wantsToBuy = /\b(buy|order|checkout|pay|purchase|i want|i need|get me)\b/.test(recentUserText);
+  const mentionsQuantity = /\b\d+\b/.test(recentUserText);
+  const mentionsKnownProduct = products.some((product: any) => recentUserText.includes(String(product.name || "").toLowerCase()));
+
+  return (hasEmail && mentionsKnownProduct) || (wantsToBuy && mentionsQuantity && mentionsKnownProduct);
+}
+
+function containsInvalidCheckoutLink(content: string) {
+  const normalized = content.toLowerCase();
+  const mentionsCheckout = normalized.includes("complete payment") || normalized.includes("payment link");
+
+  if (!mentionsCheckout) return false;
+
+  return (
+    normalized.includes("example.link") ||
+    normalized.includes("awaiting create_order") ||
+    normalized.includes("create_order response")
+  );
+}
+
+function getModelForProvider(providerName: string, preferredProvider: string, preferredModel: string) {
+  if (providerName === preferredProvider && preferredModel) return preferredModel;
+  if (providerName === "groq") return "llama-3.3-70b-versatile";
+  if (providerName === "together") return "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+  return "gpt-4o-mini";
+}
+
+function getProviderOrder(preferredProvider: string, prioritizeCheckout: boolean) {
+  const priority = prioritizeCheckout
+    ? ["openai", "groq", "together", preferredProvider]
+    : [preferredProvider, "openai", "groq", "together"];
+
+  return priority
+    .filter((name, index) => priority.indexOf(name) === index)
+    .map((name) => PROVIDERS.find((provider) => provider.name === name))
+    .filter(Boolean) as typeof PROVIDERS;
 }
 
 /**
@@ -227,12 +280,10 @@ ${manualPaymentContext}`;
     // AI Router with function calling
     const preferredProvider = site.ai_provider || "openai";
     const preferredModel = site.ai_model || "gpt-4o-mini";
-    const orderedProviders = [
-      ...PROVIDERS.filter(p => p.name === preferredProvider),
-      ...PROVIDERS.filter(p => p.name !== preferredProvider),
-    ];
+    const checkoutIntent = isLikelyCheckoutIntent(messages, products);
+    const orderedProviders = getProviderOrder(preferredProvider, checkoutIntent);
 
-    const aiMessages = [{ role: "system", content: systemPrompt }, ...messages.slice(-10)];
+    const aiMessages = [{ role: "system", content: systemPrompt }, ...messages.slice(-12)];
     const tools = buildCartTools(products);
 
     // First AI call — may return tool_call or direct response
@@ -243,16 +294,9 @@ ${manualPaymentContext}`;
       const apiKey = Deno.env.get(provider.envKey);
       if (!apiKey) continue;
       try {
-        const model = provider.name === preferredProvider ? preferredModel :
-          provider.name === "groq" ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
+        const model = getModelForProvider(provider.name, preferredProvider, preferredModel);
 
-        const bodyPayload: any = { model, messages: aiMessages };
-
-        // Only add tools for OpenAI (Groq tool calling is less reliable)
-        if (provider.name === "openai") {
-          bodyPayload.tools = tools;
-          bodyPayload.tool_choice = "auto";
-        }
+        const bodyPayload: any = { model, messages: aiMessages, tools, tool_choice: "auto" };
 
         const resp = await fetch(provider.url, {
           method: "POST",
@@ -266,7 +310,7 @@ ${manualPaymentContext}`;
           console.log(`AI Router: Using ${provider.name}/${model}`);
           break;
         }
-        console.error(`${provider.name} failed: ${resp.status}`);
+        console.error(`${provider.name} failed: ${resp.status}`, await resp.text());
       } catch (err) {
         console.error(`${provider.name} error:`, err);
       }
@@ -361,11 +405,14 @@ ${manualPaymentContext}`;
 
     // If we already have a non-streamed content, just return it
     if (choice?.message?.content) {
-      const content = choice.message.content;
+      let content = choice.message.content;
+
+      if (checkoutIntent && containsInvalidCheckoutLink(content)) {
+        content = "I couldn't generate a secure checkout link yet. Please confirm the exact items, your full name, and your email address, and I'll create the real payment link for you.";
+      }
 
       // Check if non-tool-calling provider — stream for UX
-      const streamModel = streamProvider.name === "openai" ? preferredModel :
-        streamProvider.name === "groq" ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
+      const streamModel = getModelForProvider(streamProvider.name, preferredProvider, preferredModel);
 
       const streamResp = await fetch(streamProvider.url, {
         method: "POST",
