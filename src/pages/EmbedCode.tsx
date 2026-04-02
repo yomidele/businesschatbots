@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-external";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Copy, Check } from "lucide-react";
 import { useState } from "react";

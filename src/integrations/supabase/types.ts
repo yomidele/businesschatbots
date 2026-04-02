@@ -10,561 +10,230 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
-      chat_messages: {
+      admin_settings: {
         Row: {
-          content: string
-          conversation_id: string
-          created_at: string
+          application_deadline: string
+          applications_locked: boolean | null
           id: string
-          role: string
+          result_release_date: string | null
+          selection_scheduled: string | null
+          updated_at: string | null
         }
         Insert: {
-          content: string
-          conversation_id: string
-          created_at?: string
+          application_deadline: string
+          applications_locked?: boolean | null
           id?: string
-          role: string
+          result_release_date?: string | null
+          selection_scheduled?: string | null
+          updated_at?: string | null
         }
         Update: {
-          content?: string
-          conversation_id?: string
-          created_at?: string
+          application_deadline?: string
+          applications_locked?: boolean | null
           id?: string
-          role?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chat_messages_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversations: {
-        Row: {
-          created_at: string
-          id: string
-          last_active_at: string | null
-          site_id: string
-          updated_at: string
-          visitor_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          last_active_at?: string | null
-          site_id: string
-          updated_at?: string
-          visitor_id?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          last_active_at?: string | null
-          site_id?: string
-          updated_at?: string
-          visitor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversations_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      knowledge_chunks: {
-        Row: {
-          category: string | null
-          content: string
-          created_at: string
-          id: string
-          search_vector: unknown
-          site_id: string
-          source_url: string | null
-          title: string | null
-        }
-        Insert: {
-          category?: string | null
-          content: string
-          created_at?: string
-          id?: string
-          search_vector?: unknown
-          site_id: string
-          source_url?: string | null
-          title?: string | null
-        }
-        Update: {
-          category?: string | null
-          content?: string
-          created_at?: string
-          id?: string
-          search_vector?: unknown
-          site_id?: string
-          source_url?: string | null
-          title?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "knowledge_chunks_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      landing_pages: {
-        Row: {
-          business_name: string | null
-          created_at: string
-          cta_type: string
-          description: string | null
-          html_content: string
-          id: string
-          is_published: boolean | null
-          products_used: Json | null
-          site_id: string
-          theme: string
-          title: string
-          updated_at: string
-          url_slug: string | null
-          view_count: number | null
-        }
-        Insert: {
-          business_name?: string | null
-          created_at?: string
-          cta_type?: string
-          description?: string | null
-          html_content: string
-          id: string
-          is_published?: boolean | null
-          products_used?: Json | null
-          site_id: string
-          theme?: string
-          title: string
-          updated_at?: string
-          url_slug?: string | null
-          view_count?: number | null
-        }
-        Update: {
-          business_name?: string | null
-          created_at?: string
-          cta_type?: string
-          description?: string | null
-          html_content?: string
-          id?: string
-          is_published?: boolean | null
-          products_used?: Json | null
-          site_id?: string
-          theme?: string
-          title?: string
-          updated_at?: string
-          url_slug?: string | null
-          view_count?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "landing_pages_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      manual_payment_config: {
-        Row: {
-          account_name: string
-          account_number: string
-          bank_name: string
-          created_at: string
-          id: string
-          instructions: string | null
-          site_id: string
-          updated_at: string
-        }
-        Insert: {
-          account_name: string
-          account_number: string
-          bank_name: string
-          created_at?: string
-          id?: string
-          instructions?: string | null
-          site_id: string
-          updated_at?: string
-        }
-        Update: {
-          account_name?: string
-          account_number?: string
-          bank_name?: string
-          created_at?: string
-          id?: string
-          instructions?: string | null
-          site_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "manual_payment_config_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: true
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      orders: {
-        Row: {
-          conversation_id: string | null
-          created_at: string
-          customer_address: string | null
-          customer_email: string | null
-          customer_name: string
-          customer_phone: string | null
-          id: string
-          payment_reference: string | null
-          payment_status: string
-          product_id: string | null
-          quantity: number
-          site_id: string
-          total_amount: number
-        }
-        Insert: {
-          conversation_id?: string | null
-          created_at?: string
-          customer_address?: string | null
-          customer_email?: string | null
-          customer_name: string
-          customer_phone?: string | null
-          id?: string
-          payment_reference?: string | null
-          payment_status?: string
-          product_id?: string | null
-          quantity?: number
-          site_id: string
-          total_amount: number
-        }
-        Update: {
-          conversation_id?: string | null
-          created_at?: string
-          customer_address?: string | null
-          customer_email?: string | null
-          customer_name?: string
-          customer_phone?: string | null
-          id?: string
-          payment_reference?: string | null
-          payment_status?: string
-          product_id?: string | null
-          quantity?: number
-          site_id?: string
-          total_amount?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_configs: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          provider: string
-          public_key: string
-          secret_key: string
-          site_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          provider: string
-          public_key: string
-          secret_key: string
-          site_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          provider?: string
-          public_key?: string
-          secret_key?: string
-          site_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_configs_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_confirmations: {
-        Row: {
-          created_at: string
-          customer_email: string
-          id: string
-          order_id: string
-          proof_notes: string | null
-          proof_url: string
-          rejection_reason: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          site_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          customer_email: string
-          id?: string
-          order_id: string
-          proof_notes?: string | null
-          proof_url: string
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          site_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          customer_email?: string
-          id?: string
-          order_id?: string
-          proof_notes?: string | null
-          proof_url?: string
-          rejection_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          site_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_confirmations_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_confirmations_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_links: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          label: string | null
-          link: string
-          site_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          label?: string | null
-          link: string
-          site_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          label?: string | null
-          link?: string
-          site_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_links_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      products: {
-        Row: {
-          category: string | null
-          created_at: string
-          description: string | null
-          id: string
-          image_url: string | null
-          name: string
-          price: number | null
-          site_id: string
-          stock: number | null
-          updated_at: string
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          name: string
-          price?: number | null
-          site_id: string
-          stock?: number | null
-          updated_at?: string
-        }
-        Update: {
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          name?: string
-          price?: number | null
-          site_id?: string
-          stock?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          display_name: string | null
-          email: string | null
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          email?: string | null
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          email?: string | null
-          id?: string
-          updated_at?: string
-          user_id?: string
+          result_release_date?: string | null
+          selection_scheduled?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
-      sites: {
+      applications: {
         Row: {
-          ai_model: string
-          ai_provider: string
-          chat_mode: string | null
-          created_at: string
-          currency: string
+          admission_round: number | null
+          admission_type: Database["public"]["Enums"]["admission_type"]
+          date_of_birth: string
+          email: string
+          full_name: string
+          gpa: number
           id: string
-          industry: string
-          last_crawled_at: string | null
-          name: string
-          pages_crawled: number
-          show_chat_on_landing_page: boolean | null
-          show_products_on_landing: boolean | null
-          slug: string | null
-          status: string
-          updated_at: string
-          url: string
-          user_id: string
-          welcome_message: string | null
+          matriculation_number: string | null
+          nin: string
+          passport_photo_url: string | null
+          phone: string
+          program_id: string
+          rank: number | null
+          scholarship_status: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          student_id: string
+          submitted_at: string | null
+          test_score: number
+          total_score: number | null
+          updated_at: string | null
         }
         Insert: {
-          ai_model?: string
-          ai_provider?: string
-          chat_mode?: string | null
-          created_at?: string
-          currency?: string
+          admission_round?: number | null
+          admission_type?: Database["public"]["Enums"]["admission_type"]
+          date_of_birth: string
+          email: string
+          full_name: string
+          gpa: number
           id?: string
-          industry?: string
-          last_crawled_at?: string | null
-          name: string
-          pages_crawled?: number
-          show_chat_on_landing_page?: boolean | null
-          show_products_on_landing?: boolean | null
-          slug?: string | null
-          status?: string
-          updated_at?: string
-          url: string
-          user_id: string
-          welcome_message?: string | null
+          matriculation_number?: string | null
+          nin: string
+          passport_photo_url?: string | null
+          phone: string
+          program_id: string
+          rank?: number | null
+          scholarship_status?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          student_id: string
+          submitted_at?: string | null
+          test_score: number
+          total_score?: number | null
+          updated_at?: string | null
         }
         Update: {
-          ai_model?: string
-          ai_provider?: string
-          chat_mode?: string | null
-          created_at?: string
-          currency?: string
+          admission_round?: number | null
+          admission_type?: Database["public"]["Enums"]["admission_type"]
+          date_of_birth?: string
+          email?: string
+          full_name?: string
+          gpa?: number
           id?: string
-          industry?: string
-          last_crawled_at?: string | null
+          matriculation_number?: string | null
+          nin?: string
+          passport_photo_url?: string | null
+          phone?: string
+          program_id?: string
+          rank?: number | null
+          scholarship_status?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          student_id?: string
+          submitted_at?: string | null
+          test_score?: number
+          total_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matriculation_sequences: {
+        Row: {
+          current_sequence: number | null
+          id: string
+          program_id: string
+          updated_at: string | null
+          year: number | null
+        }
+        Insert: {
+          current_sequence?: number | null
+          id?: string
+          program_id: string
+          updated_at?: string | null
+          year?: number | null
+        }
+        Update: {
+          current_sequence?: number | null
+          id?: string
+          program_id?: string
+          updated_at?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matriculation_sequences_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: true
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      programs: {
+        Row: {
+          code: string
+          created_at: string | null
+          cutoff: number
+          description: string | null
+          id: string
+          name: string
+          slots: number
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          cutoff?: number
+          description?: string | null
+          id?: string
+          name: string
+          slots?: number
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          cutoff?: number
+          description?: string | null
+          id?: string
           name?: string
-          pages_crawled?: number
-          show_chat_on_landing_page?: boolean | null
-          show_products_on_landing?: boolean | null
-          slug?: string | null
-          status?: string
-          updated_at?: string
-          url?: string
+          slots?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      selection_runs: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          cutoffs_used: Json | null
+          executed_at: string | null
+          id: string
+          rounds: Json | null
+          scheduled_at: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          cutoffs_used?: Json | null
+          executed_at?: string | null
+          id?: string
+          rounds?: Json | null
+          scheduled_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          cutoffs_used?: Json | null
+          executed_at?: string | null
+          id?: string
+          rounds?: Json | null
+          scheduled_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
-          welcome_message?: string | null
         }
         Relationships: []
       }
@@ -573,20 +242,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      search_knowledge: {
-        Args: { p_limit?: number; p_query: string; p_site_id: string }
-        Returns: {
-          category: string
-          content: string
-          id: string
-          rank: number
-          source_url: string
-          title: string
-        }[]
+      generate_matriculation_number: {
+        Args: { p_program_id: string }
+        Returns: string
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      admission_type: "regular" | "early_decision" | "transfer"
+      app_role: "admin" | "super_admin"
+      application_status:
+        | "submitted"
+        | "under_review"
+        | "selection_pending"
+        | "admitted"
+        | "waitlisted"
+        | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -713,6 +391,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      admission_type: ["regular", "early_decision", "transfer"],
+      app_role: ["admin", "super_admin"],
+      application_status: [
+        "submitted",
+        "under_review",
+        "selection_pending",
+        "admitted",
+        "waitlisted",
+        "rejected",
+      ],
+    },
   },
 } as const

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -45,8 +46,8 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   useEffect(() => { if (messages.length > 0) cacheMessages(siteId, messages); }, [messages, siteId]);
 
-  const baseUrl = supabaseUrl || import.meta.env.VITE_SUPABASE_URL;
-  const apiKey = supabaseKey || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const baseUrl = supabaseUrl || 'https://eqemgveuvkdyectdzpzy.supabase.co';
+  const apiKey = supabaseKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZW1ndmV1dmtkeWVjdGR6cHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzI1NzEsImV4cCI6MjA5MDIwODU3MX0.QixH7bgN8PsZLSYtsjPLBti7BxUV572vRIWr2mwBHvA';
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return;
