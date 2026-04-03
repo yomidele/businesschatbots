@@ -86,6 +86,7 @@ async function callDynamicCheckout(
   customerEmail: string,
   customerName: string,
   customerPhone?: string,
+  customerAddress?: string,
   conversationId?: string,
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -104,6 +105,7 @@ async function callDynamicCheckout(
         customer_email: customerEmail,
         customer_name: customerName,
         customer_phone: customerPhone,
+        customer_address: customerAddress,
         conversation_id: conversationId,
         description: items.map(i => `${i.quantity}x ${i.name}`).join(" + "),
       }),
