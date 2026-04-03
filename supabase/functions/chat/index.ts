@@ -586,6 +586,7 @@ ${manualPaymentContext}`;
         cartItems,
         args.customer_email,
         args.customer_name || "Customer",
+        args.customer_phone,
         activeConvoId,
       );
 
