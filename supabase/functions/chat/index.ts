@@ -269,7 +269,9 @@ function extractStructuredOrderFromMessages(messages: any[], products: any[]) {
 
   if (!items.length || !email || !customerName) return null;
 
-  return { items, customerEmail: email, customerName };
+  const phone = combined.match(PHONE_REGEX)?.[0]?.trim() || null;
+
+  return { items, customerEmail: email, customerName, customerPhone: phone };
 }
 
 function buildCheckoutResponse(checkoutResult: { success: boolean; data?: any; error?: string }, cartItems: CartItem[], currencySymbol: string) {
