@@ -13,6 +13,7 @@ const PROVIDERS = [
 ];
 
 const EMAIL_REGEX = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+const PHONE_REGEX = /(?:\+?\d{1,4}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,5}/;
 
 // ── PROMPT INJECTION DETECTION ──
 const INJECTION_PATTERNS = [
@@ -84,6 +85,7 @@ async function callDynamicCheckout(
   items: CartItem[],
   customerEmail: string,
   customerName: string,
+  customerPhone?: string,
   conversationId?: string,
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -101,6 +103,7 @@ async function callDynamicCheckout(
         total_amount: items.reduce((s, i) => s + i.unit_price * i.quantity, 0),
         customer_email: customerEmail,
         customer_name: customerName,
+        customer_phone: customerPhone,
         conversation_id: conversationId,
         description: items.map(i => `${i.quantity}x ${i.name}`).join(" + "),
       }),
@@ -266,7 +269,9 @@ function extractStructuredOrderFromMessages(messages: any[], products: any[]) {
 
   if (!items.length || !email || !customerName) return null;
 
-  return { items, customerEmail: email, customerName };
+  const phone = combined.match(PHONE_REGEX)?.[0]?.trim() || null;
+
+  return { items, customerEmail: email, customerName, customerPhone: phone };
 }
 
 function buildCheckoutResponse(checkoutResult: { success: boolean; data?: any; error?: string }, cartItems: CartItem[], currencySymbol: string) {
@@ -320,8 +325,9 @@ function buildCartTools(products: any[]) {
             },
             customer_email: { type: "string", description: "Customer email address" },
             customer_name: { type: "string", description: "Customer name" },
+            customer_phone: { type: "string", description: "Customer phone number" },
           },
-          required: ["items", "customer_email", "customer_name"],
+          required: ["items", "customer_email", "customer_name", "customer_phone"],
         },
       },
     },
@@ -455,9 +461,17 @@ IDENTITY: You are a trained sales representative. NEVER say you're an AI, bot, o
 You have a tool called "create_order" to generate secure payment links.
 When a customer wants to buy:
 1. CONFIRM the items, quantities, and prices from the product list
-2. COLLECT their full name and email address
-3. Call create_order with the cart items, email, and name
+2. COLLECT their full name, email address, AND phone number
+3. Call create_order with the cart items, email, name, and phone
 4. The system will return a real payment link — show it as: [Complete Payment](url)
+
+🚨 REQUIRED CHECKOUT FIELDS (MANDATORY):
+Before completing ANY order, you MUST have ALL of these:
+- ✅ Customer full name
+- ✅ Customer email address
+- ✅ Customer phone number
+If ANY of these are missing, respond: "Please provide your phone number and email before we complete your order."
+NEVER call create_order without all three fields.
 
 MULTI-PRODUCT SUPPORT:
 - Customers can buy MULTIPLE products in ONE order
@@ -474,7 +488,7 @@ PAYMENT RULES (CRITICAL):
 SALES BEHAVIOR:
 - Use ONLY the product data below — NEVER invent products or prices
 - Guide users toward purchasing with enthusiasm
-- Sales flow: DISCOVER → SELECT → COLLECT details (name, email) → CALL create_order → SHOW LINK
+- Sales flow: DISCOVER → SELECT → COLLECT details (name, email, phone) → CALL create_order → SHOW LINK
 - Keep responses short (2-4 sentences) unless listing products
 - When showing products, include name, price, and image if available
 - Suggest complementary products when appropriate
@@ -572,6 +586,7 @@ ${manualPaymentContext}`;
         cartItems,
         args.customer_email,
         args.customer_name || "Customer",
+        args.customer_phone,
         activeConvoId,
       );
 
@@ -595,6 +610,7 @@ ${manualPaymentContext}`;
         fallbackOrder.items,
         fallbackOrder.customerEmail,
         fallbackOrder.customerName,
+        fallbackOrder.customerPhone || undefined,
         activeConvoId,
       );
 
