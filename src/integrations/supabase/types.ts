@@ -230,12 +230,14 @@ export type Database = {
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
+          delivery_status: string
           id: string
           payment_reference: string | null
           payment_status: string
           product_id: string | null
           quantity: number
           site_id: string
+          status: string
           total_amount: number
         }
         Insert: {
@@ -245,12 +247,14 @@ export type Database = {
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
+          delivery_status?: string
           id?: string
           payment_reference?: string | null
           payment_status?: string
           product_id?: string | null
           quantity?: number
           site_id: string
+          status?: string
           total_amount: number
         }
         Update: {
@@ -260,12 +264,14 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
+          delivery_status?: string
           id?: string
           payment_reference?: string | null
           payment_status?: string
           product_id?: string | null
           quantity?: number
           site_id?: string
+          status?: string
           total_amount?: number
         }
         Relationships: [
@@ -428,6 +434,57 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string
+          provider: string | null
+          reference: string | null
+          site_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id: string
+          provider?: string | null
+          reference?: string | null
+          site_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          provider?: string | null
+          reference?: string | null
+          site_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string | null
@@ -505,6 +562,51 @@ export type Database = {
         }
         Relationships: []
       }
+      receipts: {
+        Row: {
+          created_at: string
+          file_url: string
+          id: string
+          order_id: string
+          site_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_url: string
+          id?: string
+          order_id: string
+          site_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string
+          id?: string
+          order_id?: string
+          site_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           ai_model: string
@@ -567,6 +669,47 @@ export type Database = {
           welcome_message?: string | null
         }
         Relationships: []
+      }
+      themes: {
+        Row: {
+          background_color: string
+          created_at: string
+          id: string
+          primary_color: string
+          secondary_color: string
+          site_id: string
+          text_color: string
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string
+          created_at?: string
+          id?: string
+          primary_color?: string
+          secondary_color?: string
+          site_id: string
+          text_color?: string
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string
+          created_at?: string
+          id?: string
+          primary_color?: string
+          secondary_color?: string
+          site_id?: string
+          text_color?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "themes_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: true
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
