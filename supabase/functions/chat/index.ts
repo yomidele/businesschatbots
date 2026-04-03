@@ -13,6 +13,7 @@ const PROVIDERS = [
 ];
 
 const EMAIL_REGEX = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+const PHONE_REGEX = /(?:\+?\d{1,4}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,5}/;
 
 // ── PROMPT INJECTION DETECTION ──
 const INJECTION_PATTERNS = [
