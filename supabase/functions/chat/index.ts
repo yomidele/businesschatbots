@@ -610,6 +610,7 @@ ${manualPaymentContext}`;
         fallbackOrder.items,
         fallbackOrder.customerEmail,
         fallbackOrder.customerName,
+        fallbackOrder.customerPhone || undefined,
         activeConvoId,
       );
 
