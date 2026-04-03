@@ -273,7 +273,18 @@ function extractStructuredOrderFromMessages(messages: any[], products: any[]) {
 
   const phone = combined.match(PHONE_REGEX)?.[0]?.trim() || null;
 
-  return { items, customerEmail: email, customerName, customerPhone: phone };
+  // Extract address - look for patterns like "address is...", "deliver to...", "my address..."
+  let address: string | null = null;
+  for (let i = userMessages.length - 1; i >= 0; i--) {
+    const msg = userMessages[i];
+    const addrMatch = msg.match(/(?:address\s*(?:is)?|deliver\s+to|ship\s+to|location\s*(?:is)?)\s*[:\-]?\s*(.{10,150})/i);
+    if (addrMatch?.[1]) { address = addrMatch[1].trim(); break; }
+  }
+
+  // Require address for fallback extraction too
+  if (!address) return null;
+
+  return { items, customerEmail: email, customerName, customerPhone: phone, customerAddress: address };
 }
 
 function buildCheckoutResponse(checkoutResult: { success: boolean; data?: any; error?: string }, cartItems: CartItem[], currencySymbol: string) {
