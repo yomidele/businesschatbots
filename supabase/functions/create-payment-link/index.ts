@@ -37,7 +37,7 @@ serve(async (req) => {
     }
 
     const body: OrderPayload = await req.json();
-    const { site_id, items, customer_email, customer_name, customer_phone, conversation_id, description } = body;
+    const { site_id, items, customer_email, customer_name, customer_phone, customer_address, conversation_id, description } = body;
 
     // ── VALIDATION ──
     if (!site_id || !customer_email) {
