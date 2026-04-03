@@ -260,6 +260,16 @@ serve(async (req) => {
       });
     }
 
+    // ── RECORD IN PAYMENTS TABLE ──
+    await supabase.from("payments").insert({
+      order_id: order.id,
+      site_id,
+      status: "pending",
+      reference,
+      amount: calculatedTotal,
+      provider: paymentConfig.provider,
+    });
+
     // ── RETURN RESPONSE ──
     return new Response(JSON.stringify({
       type: "gateway",
