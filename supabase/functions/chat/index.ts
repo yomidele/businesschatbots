@@ -627,6 +627,7 @@ ${manualPaymentContext}`;
         fallbackOrder.customerEmail,
         fallbackOrder.customerName,
         fallbackOrder.customerPhone || undefined,
+        fallbackOrder.customerAddress || undefined,
         activeConvoId,
       );
 

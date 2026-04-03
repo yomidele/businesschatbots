@@ -22,6 +22,7 @@ interface OrderPayload {
   customer_email: string;
   customer_name?: string;
   customer_phone?: string;
+  customer_address?: string;
   conversation_id?: string;
 }
 
