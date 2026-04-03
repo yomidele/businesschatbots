@@ -163,6 +163,7 @@ serve(async (req) => {
       customer_name: customer_name || "Customer",
       customer_email,
       customer_phone,
+      customer_address: customer_address || null,
       total_amount: calculatedTotal,
       payment_status: "pending",
       payment_reference: reference,
