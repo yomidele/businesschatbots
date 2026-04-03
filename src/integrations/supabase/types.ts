@@ -711,6 +711,51 @@ export type Database = {
           },
         ]
       }
+      webhook_events: {
+        Row: {
+          event_id: string
+          id: string
+          order_id: string | null
+          payload: Json | null
+          processed_at: string
+          provider: string
+          site_id: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          processed_at?: string
+          provider: string
+          site_id: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          processed_at?: string
+          provider?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

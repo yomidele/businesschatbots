@@ -86,6 +86,7 @@ async function callDynamicCheckout(
   customerEmail: string,
   customerName: string,
   customerPhone?: string,
+  customerAddress?: string,
   conversationId?: string,
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -104,6 +105,7 @@ async function callDynamicCheckout(
         customer_email: customerEmail,
         customer_name: customerName,
         customer_phone: customerPhone,
+        customer_address: customerAddress,
         conversation_id: conversationId,
         description: items.map(i => `${i.quantity}x ${i.name}`).join(" + "),
       }),
@@ -271,7 +273,18 @@ function extractStructuredOrderFromMessages(messages: any[], products: any[]) {
 
   const phone = combined.match(PHONE_REGEX)?.[0]?.trim() || null;
 
-  return { items, customerEmail: email, customerName, customerPhone: phone };
+  // Extract address - look for patterns like "address is...", "deliver to...", "my address..."
+  let address: string | null = null;
+  for (let i = userMessages.length - 1; i >= 0; i--) {
+    const msg = userMessages[i];
+    const addrMatch = msg.match(/(?:address\s*(?:is)?|deliver\s+to|ship\s+to|location\s*(?:is)?)\s*[:\-]?\s*(.{10,150})/i);
+    if (addrMatch?.[1]) { address = addrMatch[1].trim(); break; }
+  }
+
+  // Require address for fallback extraction too
+  if (!address) return null;
+
+  return { items, customerEmail: email, customerName, customerPhone: phone, customerAddress: address };
 }
 
 function buildCheckoutResponse(checkoutResult: { success: boolean; data?: any; error?: string }, cartItems: CartItem[], currencySymbol: string) {
@@ -326,8 +339,9 @@ function buildCartTools(products: any[]) {
             customer_email: { type: "string", description: "Customer email address" },
             customer_name: { type: "string", description: "Customer name" },
             customer_phone: { type: "string", description: "Customer phone number" },
+            customer_address: { type: "string", description: "Customer delivery address" },
           },
-          required: ["items", "customer_email", "customer_name", "customer_phone"],
+          required: ["items", "customer_email", "customer_name", "customer_phone", "customer_address"],
         },
       },
     },
@@ -470,8 +484,9 @@ Before completing ANY order, you MUST have ALL of these:
 - ✅ Customer full name
 - ✅ Customer email address
 - ✅ Customer phone number
-If ANY of these are missing, respond: "Please provide your phone number and email before we complete your order."
-NEVER call create_order without all three fields.
+- ✅ Customer delivery/shipping address
+If ANY of these are missing, respond: "To complete your order, I'll need your full name, email address, phone number, and delivery address."
+NEVER call create_order without all four fields.
 
 MULTI-PRODUCT SUPPORT:
 - Customers can buy MULTIPLE products in ONE order
@@ -488,7 +503,7 @@ PAYMENT RULES (CRITICAL):
 SALES BEHAVIOR:
 - Use ONLY the product data below — NEVER invent products or prices
 - Guide users toward purchasing with enthusiasm
-- Sales flow: DISCOVER → SELECT → COLLECT details (name, email, phone) → CALL create_order → SHOW LINK
+- Sales flow: DISCOVER → SELECT → COLLECT details (name, email, phone, address) → CALL create_order → SHOW LINK
 - Keep responses short (2-4 sentences) unless listing products
 - When showing products, include name, price, and image if available
 - Suggest complementary products when appropriate
@@ -587,6 +602,7 @@ ${manualPaymentContext}`;
         args.customer_email,
         args.customer_name || "Customer",
         args.customer_phone,
+        args.customer_address,
         activeConvoId,
       );
 
@@ -611,6 +627,7 @@ ${manualPaymentContext}`;
         fallbackOrder.customerEmail,
         fallbackOrder.customerName,
         fallbackOrder.customerPhone || undefined,
+        fallbackOrder.customerAddress || undefined,
         activeConvoId,
       );
 
