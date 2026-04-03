@@ -591,6 +591,7 @@ ${manualPaymentContext}`;
         args.customer_email,
         args.customer_name || "Customer",
         args.customer_phone,
+        args.customer_address,
         activeConvoId,
       );
 
