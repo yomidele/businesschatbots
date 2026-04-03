@@ -37,6 +37,18 @@ function detectPromptInjection(message: string): boolean {
   return INJECTION_PATTERNS.some((p) => p.test(message));
 }
 
+// ── ORDER CANCELLATION DETECTION ──
+const CANCEL_PATTERNS = [
+  /\b(cancel)\s*(my\s*)?(order|purchase)\b/i,
+  /\bstart\s*again\b/i,
+  /\brestart\b/i,
+  /\bcancel\s*everything\b/i,
+];
+
+function detectCancelIntent(message: string): boolean {
+  return CANCEL_PATTERNS.some((p) => p.test(message));
+}
+
 /** Sanitize user input — strip HTML and limit length */
 function sanitizeMessage(input: string): string {
   if (typeof input !== "string") return "";
@@ -382,6 +394,44 @@ serve(async (req) => {
       console.warn(`[SECURITY] Prompt injection detected from visitor ${visitorId}: ${query.slice(0, 100)}`);
       const safeReply = "I'm here to help you with our products and services! What would you like to know? 😊";
       return new Response(JSON.stringify({ reply: safeReply, conversationId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── ORDER CANCELLATION HANDLING ──
+    if (detectCancelIntent(query)) {
+      const supabaseUrlEnv = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const sbCancel = createClient(supabaseUrlEnv, supabaseServiceKey);
+
+      // Find the most recent pending/paid order for this site + visitor
+      let cancelledAny = false;
+      if (conversationId) {
+        const { data: recentOrder } = await sbCancel
+          .from("orders")
+          .select("id")
+          .eq("site_id", siteId)
+          .eq("conversation_id", conversationId)
+          .in("payment_status", ["pending"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (recentOrder) {
+          await sbCancel
+            .from("orders")
+            .update({ payment_status: "cancelled" })
+            .eq("id", recentOrder.id)
+            .eq("site_id", siteId);
+          cancelledAny = true;
+        }
+      }
+
+      const cancelReply = cancelledAny
+        ? "Your order has been cancelled. Let's start again 😊 What would you like to buy?"
+        : "You don't have an active order to cancel. What would you like to buy? 😊";
+
+      return new Response(JSON.stringify({ reply: cancelReply, conversationId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

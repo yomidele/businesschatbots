@@ -24,33 +24,30 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Resolve slug to site
-    const { data: site, error: siteError } = await supabase
+    const siteFields = `id, name, url, slug, show_chat_on_landing_page, chat_mode, show_products_on_landing, welcome_message, ai_provider, ai_model, currency, industry`;
+
+    // Try slug first, then fallback to id
+    let { data: site, error: siteError } = await supabase
       .from("sites")
-      .select(
-        `
-        id,
-        name,
-        url,
-        slug,
-        show_chat_on_landing_page,
-        chat_mode,
-        show_products_on_landing,
-        welcome_message,
-        ai_provider,
-        ai_model,
-        currency,
-        industry
-      `
-      )
+      .select(siteFields)
       .eq("slug", slug)
       .single();
 
     if (siteError || !site) {
-      return new Response(JSON.stringify({ error: "Business not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Fallback: try matching by id
+      const { data: siteById, error: idError } = await supabase
+        .from("sites")
+        .select(siteFields)
+        .eq("id", slug)
+        .single();
+
+      if (idError || !siteById) {
+        return new Response(JSON.stringify({ error: "Business not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      site = siteById;
     }
 
     // Fetch products for this site
