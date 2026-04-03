@@ -102,6 +102,7 @@ async function callDynamicCheckout(
         total_amount: items.reduce((s, i) => s + i.unit_price * i.quantity, 0),
         customer_email: customerEmail,
         customer_name: customerName,
+        customer_phone: customerPhone,
         conversation_id: conversationId,
         description: items.map(i => `${i.quantity}x ${i.name}`).join(" + "),
       }),
