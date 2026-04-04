@@ -36,6 +36,20 @@ const cacheMessages = (siteId: string, msgs: Msg[]) => {
   try { localStorage.setItem(`salesrep_msgs_${siteId}`, JSON.stringify(msgs.slice(-50))); } catch {}
 };
 
+const TypingIndicator = () => (
+  <div className="flex gap-2 sm:gap-3 animate-slide-up">
+    <div className="flex-shrink-0 h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
+      <Users className="h-3.5 w-3.5 text-primary-foreground" />
+    </div>
+    <div className="bg-muted rounded-xl px-4 py-3 flex items-center gap-1.5">
+      <span className="text-xs text-muted-foreground mr-1">AI is thinking</span>
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+    </div>
+  </div>
+);
+
 const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = false, welcomeMessage }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Msg[]>(() => getCachedMessages(siteId));
   const theme = useChatbotTheme(siteId, supabaseUrl, supabaseKey);
@@ -71,10 +85,9 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
     const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
     const imageUrl = urlData.publicUrl;
 
-    const userMsg: Msg = { role: "user", content: `📷 Image uploaded`, image_url: imageUrl };
+    const userMsg: Msg = { role: "user", content: "📷 Image uploaded", image_url: imageUrl };
     setMessages((prev) => [...prev, userMsg]);
 
-    // Send image context to AI so it knows an image was shared
     setIsLoading(true);
     try {
       const imageContextMsg = `User uploaded an image: ${imageUrl}`;
@@ -199,6 +212,7 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
 
   return (
     <div className={embedded ? "flex flex-col h-full rounded-xl overflow-hidden border" : "flex flex-col h-full"} style={{ ...themeStyles, backgroundColor: hasTheme ? theme.background_color : undefined, color: hasTheme ? theme.text_color : undefined }}>
+      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b bg-card shrink-0" style={hasTheme ? { backgroundColor: theme.primary_color, color: "#fff" } : undefined}>
         <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${hasTheme ? "" : "bg-primary"}`} style={hasTheme ? { backgroundColor: theme.secondary_color } : undefined}>
           <Users className={`h-4 w-4 ${hasTheme ? "" : "text-primary-foreground"}`} style={hasTheme ? { color: theme.text_color } : undefined} />
@@ -206,12 +220,13 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
         <div className="min-w-0">
           <p className="text-sm font-semibold truncate">{siteName || "AI Sales Rep"}</p>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-dot" />
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
             Online
           </p>
         </div>
       </div>
 
+      {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center py-8 sm:py-12 animate-fade-in">
@@ -223,18 +238,12 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
           <ChatMessageBubble key={i} msg={msg} hasTheme={hasTheme} theme={theme} />
         ))}
         {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-          <div className="flex gap-3 animate-slide-up">
-            <div className="flex-shrink-0 h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-              <Users className="h-3.5 w-3.5 text-primary-foreground" />
-            </div>
-            <div className="bg-muted rounded-xl px-4 py-3">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          </div>
+          <TypingIndicator />
         )}
         <div ref={bottomRef} />
       </div>
 
+      {/* Input area */}
       <div className="border-t bg-card px-3 sm:px-4 py-3 shrink-0">
         <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2 items-center">
           <ChatImageUpload onFileSelected={handleImageUpload} disabled={isLoading} />

@@ -1,6 +1,109 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// ── IMAGE ANALYSIS with Lovable AI (Vision) ──
+const IMAGE_URL_IN_MSG = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp)(?:\?[^\s]*)?)/i;
+
+async function analyzeUploadedImage(
+  imageUrl: string,
+  products: any[],
+  sym: string,
+): Promise<{ type: "product_match" | "receipt" | "unknown"; matchedProducts?: any[]; analysis?: string }> {
+  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableApiKey) {
+    console.warn("LOVABLE_API_KEY not set, skipping image analysis");
+    return { type: "unknown" };
+  }
+
+  const productList = products.map(p => `- "${p.name}" (${sym}${p.price}) | image: ${p.image_url || "none"}`).join("\n");
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `You are an image classifier for an e-commerce chatbot. Analyze the image and classify it as ONE of:
+1. "product_match" — the image shows a physical product, item, or something a customer wants to find/buy
+2. "receipt" — the image shows a payment receipt, bank transfer confirmation, transaction proof, or payment screenshot
+3. "unknown" — anything else (selfies, memes, random photos, etc.)
+
+If "product_match", compare with available products and return matching product names (ONLY if visually similar or clearly the same category — do NOT force matches).
+
+Available products:
+${productList}
+
+Respond using the classify_image tool.`,
+          },
+          {
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: imageUrl } },
+              { type: "text", text: "Classify this image." },
+            ],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "classify_image",
+              description: "Classify the uploaded image",
+              parameters: {
+                type: "object",
+                properties: {
+                  image_type: { type: "string", enum: ["product_match", "receipt", "unknown"] },
+                  matched_product_names: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Names of matching products from the catalog (empty if no match or not a product image)",
+                  },
+                  confidence: { type: "string", enum: ["high", "medium", "low"] },
+                  description: { type: "string", description: "Brief description of what the image shows" },
+                },
+                required: ["image_type", "matched_product_names", "confidence", "description"],
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "classify_image" } },
+      }),
+    });
+
+    if (!resp.ok) {
+      console.error("Image analysis failed:", resp.status, await resp.text());
+      return { type: "unknown" };
+    }
+
+    const data = await resp.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) return { type: "unknown" };
+
+    const args = JSON.parse(toolCall.function.arguments);
+    const imageType = args.image_type || "unknown";
+
+    if (imageType === "product_match" && args.matched_product_names?.length > 0 && args.confidence !== "low") {
+      const matched = products.filter((p: any) =>
+        args.matched_product_names.some((name: string) =>
+          p.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(p.name.toLowerCase())
+        )
+      );
+      return { type: "product_match", matchedProducts: matched, analysis: args.description };
+    }
+
+    return { type: imageType, analysis: args.description };
+  } catch (e) {
+    console.error("Image analysis error:", e);
+    return { type: "unknown" };
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -482,6 +585,69 @@ serve(async (req) => {
     const products = productsResult.data || [];
     const manualPayConfig = manualPayResult.data;
 
+    // ── IMAGE ANALYSIS ──
+    // Check if the last user message contains an image URL
+    const imageMatch = query.match(IMAGE_URL_IN_MSG);
+    let imageContext = "";
+
+    if (imageMatch) {
+      const uploadedImageUrl = imageMatch[1];
+      console.log(`[IMAGE] Analyzing uploaded image: ${uploadedImageUrl.slice(0, 80)}...`);
+
+      const imageAnalysis = await analyzeUploadedImage(uploadedImageUrl, products, sym);
+
+      if (imageAnalysis.type === "receipt") {
+        // Store receipt for admin review
+        const receiptRecord = {
+          site_id: siteId,
+          conversation_id: activeConvoId,
+          visitor_id: visitorId,
+          image_url: uploadedImageUrl,
+          status: "pending_review",
+          created_at: new Date().toISOString(),
+        };
+
+        const { error: receiptError } = await supabase
+          .from("payment_confirmations")
+          .insert(receiptRecord);
+
+        if (receiptError) {
+          console.error("Failed to store receipt:", receiptError);
+        }
+
+        const receiptReply = "Thank you for sending your payment receipt! 🧾 I've forwarded it to our team for verification. You'll receive a confirmation once it's been reviewed. Is there anything else I can help you with?";
+
+        if (activeConvoId) {
+          await supabase.from("chat_messages").insert({ conversation_id: activeConvoId, role: "user", content: query });
+          await supabase.from("chat_messages").insert({ conversation_id: activeConvoId, role: "assistant", content: receiptReply });
+        }
+
+        return new Response(JSON.stringify({ reply: receiptReply, conversationId: activeConvoId }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (imageAnalysis.type === "product_match" && imageAnalysis.matchedProducts?.length) {
+        const matchedList = imageAnalysis.matchedProducts.map((p: any) =>
+          `- ${p.name} | ${sym}${p.price} | ${p.category || "General"}${p.image_url ? ` | Image: ${p.image_url}` : ""}`
+        ).join("\n");
+
+        imageContext = `\n\n🖼️ IMAGE ANALYSIS CONTEXT:
+The customer uploaded an image. Analysis: "${imageAnalysis.analysis}"
+The following products from our catalog visually match the uploaded image:
+${matchedList}
+Show these matched products to the customer with their images and prices. Ask if any of these are what they're looking for.`;
+      } else if (imageAnalysis.type === "product_match") {
+        imageContext = `\n\n🖼️ IMAGE ANALYSIS CONTEXT:
+The customer uploaded an image of a product. Analysis: "${imageAnalysis.analysis}"
+No exact matches found in our catalog. Let the customer know we don't have an exact match but show similar products if available.`;
+      } else {
+        imageContext = `\n\n🖼️ IMAGE ANALYSIS CONTEXT:
+The customer uploaded an image. Analysis: "${imageAnalysis.analysis || "Could not determine the content."}"
+Acknowledge the image and continue helping the customer.`;
+      }
+    }
+
     // Build context strings
     const currSymbols: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", NGN: "₦", KES: "KSh", GHS: "₵", ZAR: "R", INR: "₹", CAD: "CA$", AUD: "A$" };
     const sym = currSymbols[site.currency || "USD"] || (site.currency + " ");
@@ -555,13 +721,20 @@ SALES BEHAVIOR:
 - Guide users toward purchasing with enthusiasm
 - Sales flow: DISCOVER → SELECT → COLLECT details (name, email, phone, address) → CALL create_order → SHOW LINK
 - Keep responses short (2-4 sentences) unless listing products
-- When showing products, include name, price, and image if available
+
+PRODUCT DISPLAY RULES (VERY IMPORTANT):
+- When showing products, ALWAYS use markdown image syntax to display product images
+- Format: ![Product Name](image_url)
+- Example: "**Nike Air Max** — ₦120,000\n![Nike Air Max](https://example.com/shoe.jpg)\nComfortable running shoe."
+- NEVER show raw image URLs as plain text — always wrap in markdown image syntax
+- When listing multiple products, show each with its image using the format above
+- If a product has no image, skip the image line
 - Suggest complementary products when appropriate
 
 WEBSITE KNOWLEDGE:
 ${knowledgeContext || "No specific knowledge available."}
 ${productContext || "No products catalogued yet."}
-${manualPaymentContext}`;
+${manualPaymentContext}${imageContext}`;
 
     // Store user message
     if (activeConvoId && lastUserMsg) {

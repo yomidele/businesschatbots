@@ -1,10 +1,11 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, AlertCircle, ShoppingCart, DollarSign, MessageCircle, X } from "lucide-react";
+import { Loader2, AlertCircle, ShoppingCart, DollarSign } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ChatInterface from "@/components/ChatInterface";
+import FloatingChatWidget from "@/components/chat/FloatingChatWidget";
 import { supabase } from "@/lib/supabase-external";
 
 interface LandingPageData {
@@ -52,7 +53,7 @@ export default function Store() {
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<LandingPageData["products"][0] | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showFloatingChat, setShowFloatingChat] = useState(false);
+  
 
   useEffect(() => {
     const fetchLandingPage = async () => {
@@ -274,33 +275,11 @@ export default function Store() {
       )}
 
       {/* Floating Chat Widget */}
-      <div className="fixed bottom-6 right-6 z-50">
-        {showFloatingChat ? (
-          <div className="w-[380px] h-[500px] bg-card rounded-2xl shadow-2xl border overflow-hidden flex flex-col animate-fade-in">
-            <div className="flex items-center justify-between px-4 py-2 border-b">
-              <span className="text-sm font-semibold">{data.business.name}</span>
-              <button onClick={() => setShowFloatingChat(false)} className="p-1 hover:bg-muted rounded">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <ChatInterface
-                siteId={data.business.id}
-                siteName={data.business.name}
-                embedded={true}
-                welcomeMessage={data.chat.welcome_message || data.business.welcome_message}
-              />
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowFloatingChat(true)}
-            className="h-14 w-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 flex items-center justify-center transition-transform hover:scale-105"
-          >
-            <MessageCircle className="h-6 w-6" />
-          </button>
-        )}
-      </div>
+      <FloatingChatWidget
+        siteId={data.business.id}
+        siteName={data.business.name}
+        welcomeMessage={data.chat.welcome_message || data.business.welcome_message}
+      />
 
       {/* Payment Modal */}
       {showPaymentModal && selectedProduct && (
