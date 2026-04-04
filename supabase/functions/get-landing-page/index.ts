@@ -42,8 +42,9 @@ serve(async (req) => {
         .single();
 
       if (idError || !siteById) {
-        return new Response(JSON.stringify({ error: "Business not found" }), {
-          status: 404,
+        // Safe fallback — never throw 404, return structured response
+        return new Response(JSON.stringify({ success: false, message: "Landing page not created", business: null, products: [], payment: { mode: "none" } }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

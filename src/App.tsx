@@ -63,6 +63,7 @@ const App = () => (
             <Route path="/embed/:siteId" element={<ProtectedRoute><EmbedCode /></ProtectedRoute>} />
             <Route path="/docs" element={<ProtectedRoute><Docs /></ProtectedRoute>} />
             <Route path="/widget/:siteId" element={<ChatWidget />} />
+            <Route path="/widget" element={<ChatWidget />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
