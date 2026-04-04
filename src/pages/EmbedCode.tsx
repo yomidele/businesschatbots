@@ -22,38 +22,11 @@ const EmbedCode = () => {
     enabled: !!siteId,
   });
 
-  const publishedUrl = "https://businesschatbots.lovable.app";
+  const publishedUrl = "https://businessaleschat.vercel.app";
 
-  // Lazy-loading embed script — widget loads ONLY when clicked
+  // Universal embed script — auto-updating, cache-busting
   const embedScript = `<!-- AI Sales Rep Widget -->
-<script>
-(function() {
-  var w = document.createElement('div');
-  w.id = 'salesrep-widget';
-  w.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;';
-  document.body.appendChild(w);
-
-  var btn = document.createElement('button');
-  btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-  btn.style.cssText = 'width:56px;height:56px;border-radius:50%;background:#10b981;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
-
-  var frame = document.createElement('iframe');
-  frame.style.cssText = 'width:380px;height:520px;border:none;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.15);display:none;margin-bottom:12px;';
-
-  var loaded = false;
-
-  w.appendChild(frame);
-  w.appendChild(btn);
-
-  btn.onclick = function() {
-    if (!loaded) {
-      frame.src = '${publishedUrl}/widget/${siteId}';
-      loaded = true;
-    }
-    frame.style.display = frame.style.display === 'none' ? 'block' : 'none';
-  };
-})();
-</script>`;
+<script src="${publishedUrl}/widget.js?t=${Date.now()}" data-site-id="${siteId}" defer><\/script>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedScript);
@@ -80,7 +53,7 @@ const EmbedCode = () => {
             <div>
               <p className="text-sm font-medium">Installation code</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Paste before the closing {'</body>'} tag on your website. Widget loads only when clicked.
+                Paste before the closing {'</body>'} tag on your website. Auto-updates — no need to change embed code when you update features.
               </p>
             </div>
             <Button size="sm" variant="outline" className="h-7 text-xs w-fit" onClick={handleCopy}>

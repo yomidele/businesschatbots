@@ -20,6 +20,7 @@ import ChatWidget from "./pages/ChatWidget";
 import Store from "./pages/Store";
 import Docs from "./pages/Docs";
 import LandingPageGenerator from "./pages/LandingPageGenerator";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/docs" element={<ProtectedRoute><Docs /></ProtectedRoute>} />
             <Route path="/widget/:siteId" element={<ChatWidget />} />
             <Route path="/widget" element={<ChatWidget />} />
+            <Route path="/p/:slug" element={<LandingPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

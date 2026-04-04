@@ -8,6 +8,10 @@ interface FloatingChatWidgetProps {
   welcomeMessage?: string;
 }
 
+const isEmbedded = () => {
+  try { return window.self !== window.top; } catch { return true; }
+};
+
 const FloatingChatWidget = ({ siteId, siteName, welcomeMessage }: FloatingChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -17,9 +21,26 @@ const FloatingChatWidget = ({ siteId, siteName, welcomeMessage }: FloatingChatWi
     if (isOpen) setUnread(0);
   }, [isOpen]);
 
+  const postToParent = (type: string) => {
+    if (isEmbedded()) {
+      window.parent.postMessage({ type }, "*");
+    }
+  };
+
+  const toggleFullscreen = () => {
+    const next = !isFullscreen;
+    setIsFullscreen(next);
+    postToParent(next ? "salesrep-fullscreen" : "salesrep-minimize");
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setIsFullscreen(false);
+    postToParent("salesrep-close");
+  };
+
   return (
     <>
-      {/* Floating button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -35,7 +56,6 @@ const FloatingChatWidget = ({ siteId, siteName, welcomeMessage }: FloatingChatWi
         </button>
       )}
 
-      {/* Chat panel */}
       {isOpen && (
         <div
           className={`fixed z-50 transition-all duration-300 ease-in-out ${
@@ -47,17 +67,16 @@ const FloatingChatWidget = ({ siteId, siteName, welcomeMessage }: FloatingChatWi
           <div className={`relative h-full w-full bg-card flex flex-col overflow-hidden ${
             isFullscreen ? "" : "rounded-2xl border border-border"
           }`}>
-            {/* Custom header with controls */}
             <div className="absolute top-0 right-0 z-10 flex items-center gap-1 p-2">
               <button
-                onClick={() => setIsFullscreen(!isFullscreen)}
+                onClick={toggleFullscreen}
                 className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors"
                 aria-label={isFullscreen ? "Minimize" : "Maximize"}
               >
                 {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
               <button
-                onClick={() => { setIsOpen(false); setIsFullscreen(false); }}
+                onClick={handleClose}
                 className="h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors"
                 aria-label="Close chat"
               >
