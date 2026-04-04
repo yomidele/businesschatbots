@@ -191,8 +191,8 @@ const BulkCSVUpload = ({ siteId, onSuccess }: BulkCSVUploadProps) => {
             <div className="space-y-2">
               {result.success > 0 && (
                 <Alert>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-700">{result.success} products uploaded successfully</AlertDescription>
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <AlertDescription>{result.success} products uploaded successfully</AlertDescription>
                 </Alert>
               )}
               {result.failed > 0 && (
