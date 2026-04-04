@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Package, Loader2, Trash2, Pencil, Image as ImageIcon, Upload, X, AlertCircle } from "lucide-react";
+import BulkCSVUpload from "@/components/BulkCSVUpload";
 
 const Products = () => {
   const { toast } = useToast();
