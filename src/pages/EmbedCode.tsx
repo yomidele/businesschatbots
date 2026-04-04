@@ -22,8 +22,9 @@ const EmbedCode = () => {
     enabled: !!siteId,
   });
 
-  const appUrl = window.location.origin;
+  const publishedUrl = "https://businesschatbots.lovable.app";
 
+  // Lazy-loading embed script — widget loads ONLY when clicked
   const embedScript = `<!-- AI Sales Rep Widget -->
 <script>
 (function() {
@@ -34,16 +35,21 @@ const EmbedCode = () => {
 
   var btn = document.createElement('button');
   btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-  btn.style.cssText = 'width:56px;height:56px;border-radius:50%;background:hsl(160,84%,39%);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+  btn.style.cssText = 'width:56px;height:56px;border-radius:50%;background:#10b981;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
 
   var frame = document.createElement('iframe');
-  frame.src = '${appUrl}/widget/${siteId}';
   frame.style.cssText = 'width:380px;height:520px;border:none;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.15);display:none;margin-bottom:12px;';
+
+  var loaded = false;
 
   w.appendChild(frame);
   w.appendChild(btn);
 
   btn.onclick = function() {
+    if (!loaded) {
+      frame.src = '${publishedUrl}/widget/${siteId}';
+      loaded = true;
+    }
     frame.style.display = frame.style.display === 'none' ? 'block' : 'none';
   };
 })();
@@ -74,7 +80,7 @@ const EmbedCode = () => {
             <div>
               <p className="text-sm font-medium">Installation code</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Paste before the closing {'</body>'} tag on your website.
+                Paste before the closing {'</body>'} tag on your website. Widget loads only when clicked.
               </p>
             </div>
             <Button size="sm" variant="outline" className="h-7 text-xs w-fit" onClick={handleCopy}>
