@@ -57,7 +57,7 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
     const timestamp = Date.now();
     const random = Math.random().toString(36).substr(2, 9);
     const ext = file.name.split(".").pop();
-    const path = `${siteId}/${visitorId.current}/${timestamp}_${random}.${ext}`;
+    const path = `chat-uploads/${siteId}/${visitorId.current}/${timestamp}_${random}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("product-images")
@@ -71,9 +71,31 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
     const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
     const imageUrl = urlData.publicUrl;
 
-    const userMsg: Msg = { role: "user", content: "📷 Image uploaded", image_url: imageUrl };
+    const userMsg: Msg = { role: "user", content: `📷 Image uploaded`, image_url: imageUrl };
     setMessages((prev) => [...prev, userMsg]);
-  }, [siteId]);
+
+    // Send image context to AI so it knows an image was shared
+    setIsLoading(true);
+    try {
+      const imageContextMsg = `User uploaded an image: ${imageUrl}`;
+      const allMessages = [...messages, { role: "user" as const, content: imageContextMsg }];
+
+      const resp = await fetch(`${baseUrl}/functions/v1/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ siteId, messages: allMessages, conversationId, visitorId: visitorId.current }),
+      });
+
+      const data = await resp.json();
+      if (data.reply) {
+        setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      }
+      if (data.conversationId) setConversationId(data.conversationId);
+    } catch (e) {
+      console.error("Image context error:", e);
+    }
+    setIsLoading(false);
+  }, [siteId, messages, baseUrl, apiKey, conversationId]);
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return;
