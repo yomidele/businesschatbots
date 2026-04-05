@@ -17,8 +17,8 @@ const LandingPage = () => {
 
     const fetchPage = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_SUPABASE_URL || "https://eqemgveuvkdyectdzpzy.supabase.co";
-        const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZW1ndmV1dmtkeWVjdGR6cHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzI1NzEsImV4cCI6MjA5MDIwODU3MX0.QixH7bgN8PsZLSYtsjPLBti7BxUV572vRIWr2mwBHvA";
+        const baseUrl = "https://eqemgveuvkdyectdzpzy.supabase.co";
+        const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZW1ndmV1dmtkeWVjdGR6cHp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzI1NzEsImV4cCI6MjA5MDIwODU3MX0.QixH7bgN8PsZLSYtsjPLBti7BxUV572vRIWr2mwBHvA";
 
         const resp = await fetch(
           `${baseUrl}/functions/v1/get-landing-page?slug=${encodeURIComponent(slug)}`,

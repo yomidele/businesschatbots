@@ -95,7 +95,7 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
 
       const resp = await fetch(`${baseUrl}/functions/v1/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        headers: { "Content-Type": "application/json", apikey: apiKey, Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ siteId, messages: allMessages, conversationId, visitorId: visitorId.current }),
       });
 
@@ -144,7 +144,7 @@ const ChatInterface = ({ siteId, siteName, supabaseUrl, supabaseKey, embedded = 
     try {
       const resp = await fetch(`${baseUrl}/functions/v1/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        headers: { "Content-Type": "application/json", apikey: apiKey, Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ siteId, messages: allMessages, conversationId, visitorId: visitorId.current }),
       });
 

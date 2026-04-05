@@ -5,7 +5,7 @@
 (function () {
   console.log("Chatbot version:", Date.now());
 
-  var WIDGET_BASE = "https://businessaleschat.vercel.app";
+  var WIDGET_BASE = window.location.origin || "https://admirflow.lovable.app";
   var siteId = document.currentScript && document.currentScript.getAttribute("data-site-id");
   if (!siteId) {
     console.error("[SalesRep] Missing data-site-id attribute on script tag.");
