@@ -111,6 +111,18 @@ const Sites = () => {
 
   const addSiteMutation = useMutation({
     mutationFn: async () => {
+      const storeConfig = {
+        storefront: { auth_required: false, wallet_enabled: false, payment_mode: "direct" },
+        account: { auth_required: true, wallet_enabled: false, payment_mode: "direct" },
+        wallet: { auth_required: true, wallet_enabled: true, payment_mode: "wallet" },
+      }[newStoreType] || { auth_required: false, wallet_enabled: false, payment_mode: "direct" };
+
+      let apiConfig = null;
+      if (newStoreType !== "storefront" && apiBaseUrl) {
+        try { apiConfig = { baseUrl: apiBaseUrl, endpoints: apiEndpoints ? JSON.parse(apiEndpoints) : {} }; }
+        catch { apiConfig = { baseUrl: apiBaseUrl, endpoints: {} }; }
+      }
+
       const { error } = await supabase.from("sites").insert({
         name: newSiteName,
         url: newSiteUrl,
@@ -120,18 +132,18 @@ const Sites = () => {
         ai_model: newModel,
         industry: newIndustry,
         currency: newCurrency,
+        store_type: newStoreType,
+        ...storeConfig,
+        api_config: apiConfig,
       } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sites"] });
-      setNewSiteName("");
-      setNewSiteUrl("");
-      setNewSlug("");
-      setNewProvider("openai");
-      setNewModel("gpt-4o-mini");
-      setNewIndustry("other");
-      setNewCurrency("USD");
+      setNewSiteName(""); setNewSiteUrl(""); setNewSlug("");
+      setNewProvider("openai"); setNewModel("gpt-4o-mini");
+      setNewIndustry("other"); setNewCurrency("USD");
+      setNewStoreType("storefront"); setApiBaseUrl(""); setApiEndpoints("");
       setDialogOpen(false);
       toast({ title: "Sales Rep created", description: "Crawl the site to train your AI Sales Rep." });
     },
