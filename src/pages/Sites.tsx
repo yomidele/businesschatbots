@@ -544,7 +544,7 @@ const Sites = () => {
                           title="Landing Page"
                         >
                           <a href={`/store/${site.slug}`} target="_blank" rel="noopener noreferrer">
-                            <Store className="h-3.5 w-3.5" />
+                            <StoreIcon className="h-3.5 w-3.5" />
                           </a>
                         </Button>
                       )}
