@@ -658,6 +658,8 @@ export type Database = {
         Row: {
           ai_model: string
           ai_provider: string
+          api_config: Json | null
+          auth_required: boolean
           chat_mode: string | null
           created_at: string
           currency: string
@@ -666,18 +668,23 @@ export type Database = {
           last_crawled_at: string | null
           name: string
           pages_crawled: number
+          payment_mode: string
           show_chat_on_landing_page: boolean | null
           show_products_on_landing: boolean | null
           slug: string | null
           status: string
+          store_type: string
           updated_at: string
           url: string
           user_id: string
+          wallet_enabled: boolean
           welcome_message: string | null
         }
         Insert: {
           ai_model?: string
           ai_provider?: string
+          api_config?: Json | null
+          auth_required?: boolean
           chat_mode?: string | null
           created_at?: string
           currency?: string
@@ -686,18 +693,23 @@ export type Database = {
           last_crawled_at?: string | null
           name: string
           pages_crawled?: number
+          payment_mode?: string
           show_chat_on_landing_page?: boolean | null
           show_products_on_landing?: boolean | null
           slug?: string | null
           status?: string
+          store_type?: string
           updated_at?: string
           url: string
           user_id: string
+          wallet_enabled?: boolean
           welcome_message?: string | null
         }
         Update: {
           ai_model?: string
           ai_provider?: string
+          api_config?: Json | null
+          auth_required?: boolean
           chat_mode?: string | null
           created_at?: string
           currency?: string
@@ -706,13 +718,16 @@ export type Database = {
           last_crawled_at?: string | null
           name?: string
           pages_crawled?: number
+          payment_mode?: string
           show_chat_on_landing_page?: boolean | null
           show_products_on_landing?: boolean | null
           slug?: string | null
           status?: string
+          store_type?: string
           updated_at?: string
           url?: string
           user_id?: string
+          wallet_enabled?: boolean
           welcome_message?: string | null
         }
         Relationships: []
