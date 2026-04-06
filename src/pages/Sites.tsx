@@ -301,6 +301,69 @@ const Sites = () => {
                   </Select>
                 </div>
               </div>
+
+              {/* Store Type Selection */}
+              <div className="space-y-2">
+                <Label>Store Type</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(storeTypeConfig).map(([key, config]) => {
+                    const Icon = config.icon;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setNewStoreType(key)}
+                        className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                          newStoreType === key ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-sm">{config.label}</p>
+                          <p className="text-xs text-muted-foreground">{config.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* API Config for Account/Wallet stores */}
+              {newStoreType !== "storefront" && (
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg border border-border">
+                  <p className="text-sm font-medium">🔌 Backend API Configuration</p>
+                  <p className="text-xs text-muted-foreground">
+                    {newStoreType === "wallet"
+                      ? "Connect your wallet platform's API so the chatbot can check balances, initiate top-ups, and process orders."
+                      : "Connect your account store's API so the chatbot can verify users and create orders."}
+                  </p>
+                  <div className="space-y-2">
+                    <Label className="text-xs">API Base URL</Label>
+                    <Input
+                      value={apiBaseUrl}
+                      onChange={(e) => setApiBaseUrl(e.target.value)}
+                      placeholder="https://yoursite.com/api"
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">API Endpoints (JSON)</Label>
+                    <Textarea
+                      value={apiEndpoints}
+                      onChange={(e) => setApiEndpoints(e.target.value)}
+                      placeholder={newStoreType === "wallet"
+                        ? '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create",\n  "walletTopup": "/wallet/topup",\n  "getWalletBalance": "/wallet/balance"\n}'
+                        : '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create"\n}'}
+                      rows={5}
+                      className="text-xs font-mono"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    💡 You can also configure this later from site settings.
+                  </p>
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={addSiteMutation.isPending}>
                 {addSiteMutation.isPending ? "Creating..." : "Deploy Sales Rep"}
               </Button>
