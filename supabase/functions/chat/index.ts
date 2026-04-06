@@ -552,7 +552,7 @@ serve(async (req) => {
     // Get site config
     const { data: site, error: siteError } = await supabase
       .from("sites")
-      .select("name, url, ai_provider, ai_model, currency, industry")
+      .select("name, url, ai_provider, ai_model, currency, industry, store_type, auth_required, wallet_enabled, payment_mode, api_config")
       .eq("id", siteId)
       .single();
 
