@@ -10,9 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink, Store, Copy, Palette } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink, Store as StoreIcon, Copy, Palette, User, Wallet, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import ChatbotThemeSettings from "@/components/ChatbotThemeSettings";
+
+const storeTypeConfig = {
+  storefront: { label: "Storefront", icon: StoreIcon, desc: "Simple chat-to-buy. No login required. Direct purchase via chat." },
+  account: { label: "Account Store", icon: User, desc: "Users login to track orders. Optional wallet." },
+  wallet: { label: "Wallet Platform", icon: Wallet, desc: "Users fund wallet, then purchase. Full transaction history." },
+};
 
 const statusColors: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
