@@ -551,6 +551,24 @@ const Sites = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* API Config Dialog */}
+      <Dialog open={!!apiConfigSiteId} onOpenChange={(open) => !open && setApiConfigSiteId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Backend API Configuration
+            </DialogTitle>
+          </DialogHeader>
+          {apiConfigSiteId && (
+            <ApiConfigEditor
+              siteId={apiConfigSiteId}
+              onClose={() => setApiConfigSiteId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
