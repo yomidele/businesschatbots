@@ -82,6 +82,76 @@ const generateSlug = (name: string): string => {
     .substring(0, 50);
 };
 
+const ApiConfigEditor = ({ siteId, onClose }: { siteId: string; onClose: () => void }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [baseUrl, setBaseUrl] = useState("");
+  const [endpoints, setEndpoints] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data: site } = useQuery({
+    queryKey: ["site-config", siteId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sites").select("api_config, store_type").eq("id", siteId).single();
+      if (error) throw error;
+      if (data?.api_config) {
+        const cfg = data.api_config as any;
+        setBaseUrl(cfg.baseUrl || "");
+        setEndpoints(cfg.endpoints ? JSON.stringify(cfg.endpoints, null, 2) : "");
+      }
+      return data;
+    },
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      let parsedEndpoints = {};
+      if (endpoints.trim()) {
+        try { parsedEndpoints = JSON.parse(endpoints); }
+        catch { toast({ title: "Invalid JSON", description: "Endpoints must be valid JSON", variant: "destructive" }); setSaving(false); return; }
+      }
+      const { error } = await supabase.from("sites").update({ api_config: { baseUrl, endpoints: parsedEndpoints } } as any).eq("id", siteId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["sites"] });
+      toast({ title: "API config saved" });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  const storeType = (site as any)?.store_type || "storefront";
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        {storeType === "wallet"
+          ? "Configure API endpoints for wallet balance checks, top-ups, and order creation."
+          : "Configure API endpoints for user authentication and order management."}
+      </p>
+      <div className="space-y-2">
+        <Label>API Base URL</Label>
+        <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://yoursite.com/api" />
+      </div>
+      <div className="space-y-2">
+        <Label>Endpoints (JSON)</Label>
+        <Textarea
+          value={endpoints}
+          onChange={(e) => setEndpoints(e.target.value)}
+          placeholder={storeType === "wallet"
+            ? '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create",\n  "walletTopup": "/wallet/topup",\n  "getWalletBalance": "/wallet/balance"\n}'
+            : '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create"\n}'}
+          rows={6}
+          className="font-mono text-xs"
+        />
+      </div>
+      <Button onClick={handleSave} className="w-full" disabled={saving}>
+        {saving ? "Saving..." : "Save Configuration"}
+      </Button>
+    </div>
+  );
+};
+
 const Sites = () => {
   const { user } = useAuth();
   const { toast } = useToast();
