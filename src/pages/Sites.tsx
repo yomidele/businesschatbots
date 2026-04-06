@@ -507,6 +507,17 @@ const Sites = () => {
                         >
                           <Palette className="h-3.5 w-3.5" />
                         </Button>
+                        {sType !== "storefront" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => setApiConfigSiteId(site.id)}
+                            title="API Settings"
+                          >
+                            <Settings className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -519,7 +530,8 @@ const Sites = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
