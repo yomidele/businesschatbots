@@ -393,6 +393,7 @@ const Sites = () => {
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left font-medium text-muted-foreground px-4 py-3">Business</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Type</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Landing Page</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Industry</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Status</th>
@@ -400,7 +401,11 @@ const Sites = () => {
               </tr>
             </thead>
             <tbody>
-              {sites.map((site) => (
+              {sites.map((site) => {
+                const sType = (site as any).store_type || "storefront";
+                const typeInfo = storeTypeConfig[sType] || storeTypeConfig.storefront;
+                const TypeIcon = typeInfo.icon;
+                return (
                 <tr key={site.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <div>
@@ -410,6 +415,11 @@ const Sites = () => {
                         <span className="truncate max-w-[180px]">{site.url}</span>
                       </p>
                     </div>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <Badge variant="outline" className="text-xs">
+                      <TypeIcon className="h-3 w-3 mr-1" />{typeInfo.label}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     {site.slug ? (
