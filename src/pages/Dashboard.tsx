@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink } from "lucide-react";
+import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink, Store, Wallet, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const statusColors: Record<string, string> = {
@@ -19,6 +19,12 @@ const statusColors: Record<string, string> = {
   crawling: "bg-warning/10 text-warning border-warning/20",
   ready: "bg-success/10 text-success border-success/20",
   error: "bg-destructive/10 text-destructive border-destructive/20",
+};
+
+const storeTypeConfig = {
+  storefront: { label: "Storefront", icon: Store, color: "bg-emerald-100 text-emerald-700 border-emerald-200", desc: "Simple chat-to-buy. No login required." },
+  account: { label: "Account Store", icon: User, color: "bg-blue-100 text-blue-700 border-blue-200", desc: "Users login to track orders." },
+  wallet: { label: "Wallet Platform", icon: Wallet, color: "bg-purple-100 text-purple-700 border-purple-200", desc: "Users fund wallet, then purchase." },
 };
 
 const AI_MODELS: Record<string, { label: string; models: { value: string; label: string }[] }> = {
@@ -50,6 +56,7 @@ const Dashboard = () => {
   const [newSiteUrl, setNewSiteUrl] = useState("");
   const [newProvider, setNewProvider] = useState("openai");
   const [newModel, setNewModel] = useState("gpt-4o-mini");
+  const [newStoreType, setNewStoreType] = useState("storefront");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: sites, isLoading } = useQuery({
@@ -63,12 +70,20 @@ const Dashboard = () => {
 
   const addSiteMutation = useMutation({
     mutationFn: async () => {
+      const storeConfig = {
+        storefront: { auth_required: false, wallet_enabled: false, payment_mode: "direct" },
+        account: { auth_required: true, wallet_enabled: false, payment_mode: "direct" },
+        wallet: { auth_required: true, wallet_enabled: true, payment_mode: "wallet" },
+      }[newStoreType] || { auth_required: false, wallet_enabled: false, payment_mode: "direct" };
+
       const { error } = await supabase.from("sites").insert({
         name: newSiteName,
         url: newSiteUrl,
         user_id: user!.id,
         ai_provider: newProvider,
         ai_model: newModel,
+        store_type: newStoreType,
+        ...storeConfig,
       } as any);
       if (error) throw error;
     },
@@ -78,6 +93,7 @@ const Dashboard = () => {
       setNewSiteUrl("");
       setNewProvider("openai");
       setNewModel("gpt-4o-mini");
+      setNewStoreType("storefront");
       setDialogOpen(false);
       toast({ title: "Site added", description: "Now crawl the site to build its knowledge base." });
     },
@@ -109,28 +125,26 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      {/* Header with Greeting */}
-      <div className="mb-12">
-        <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+      <div className="mb-8 sm:mb-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-4xl font-bold">Hello {user?.user_metadata?.full_name || user?.email?.split("@")[0]}</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold">Hello {user?.user_metadata?.full_name || user?.email?.split("@")[0]}</h1>
             <div className="flex items-center gap-2 mt-2">
               <span className="inline-block h-2 w-2 bg-yellow-400 rounded-full"></span>
-              <p className="text-sm text-gray-600">Status: Online</p>
+              <p className="text-sm text-muted-foreground">Status: Online</p>
             </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="flex gap-3">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Plus className="h-4 w-4 mr-2" /> New site
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Connect a website</DialogTitle>
               </DialogHeader>
@@ -143,6 +157,33 @@ const Dashboard = () => {
                   <Label>Website URL</Label>
                   <Input value={newSiteUrl} onChange={(e) => setNewSiteUrl(e.target.value)} required placeholder="https://example.com" />
                 </div>
+
+                {/* Store Type Selection */}
+                <div className="space-y-2">
+                  <Label>Store Type</Label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {Object.entries(storeTypeConfig).map(([key, config]) => {
+                      const Icon = config.icon;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setNewStoreType(key)}
+                          className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                            newStoreType === key ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                          }`}
+                        >
+                          <Icon className="h-5 w-5 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-medium text-sm">{config.label}</p>
+                            <p className="text-xs text-muted-foreground">{config.desc}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>AI Provider</Label>
@@ -166,7 +207,19 @@ const Dashboard = () => {
                     </Select>
                   </div>
                 </div>
-                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={addSiteMutation.isPending}>
+
+                {/* API Config for wallet/account stores */}
+                {newStoreType !== "storefront" && (
+                  <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {newStoreType === "wallet" 
+                        ? "💡 Wallet API endpoints can be configured after creation in site settings."
+                        : "💡 Account API endpoints can be configured after creation in site settings."}
+                    </p>
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full" disabled={addSiteMutation.isPending}>
                   {addSiteMutation.isPending ? "Adding..." : "Add site"}
                 </Button>
               </form>
@@ -176,86 +229,130 @@ const Dashboard = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
       ) : !sites?.length ? (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center py-20 bg-gray-50">
-          <Globe className="h-12 w-12 text-gray-400 mb-4" />
+        <div className="border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center py-20 bg-muted/30">
+          <Globe className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-semibold text-lg mb-2">No sites connected</h3>
-          <p className="text-gray-600 text-sm mb-6">Add your first website to create an AI agent</p>
-          <Button size="sm" onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+          <p className="text-muted-foreground text-sm mb-6">Add your first website to create an AI agent</p>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> New site
           </Button>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-white">
-                <th className="text-left font-semibold text-gray-700 px-6 py-4">Name</th>
-                <th className="text-left font-semibold text-gray-700 px-6 py-4 hidden md:table-cell">Provider</th>
-                <th className="text-left font-semibold text-gray-700 px-6 py-4 hidden sm:table-cell">Status</th>
-                <th className="text-left font-semibold text-gray-700 px-6 py-4 hidden lg:table-cell">Pages</th>
-                <th className="text-right font-semibold text-gray-700 px-6 py-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sites.map((site) => (
-                <tr key={site.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-medium text-gray-900">{site.name}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <ExternalLink className="h-3 w-3" />
-                        {site.url}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 hidden md:table-cell">
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="outline" className="text-xs font-mono bg-gray-100 border-gray-300">
-                        {(site as any).ai_provider || "openai"}/{(site as any).ai_model || "gpt-4o-mini"}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 hidden sm:table-cell">
-                    <Badge className={statusColors[site.status] || ""} variant="outline">
-                      {site.status}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 hidden lg:table-cell text-gray-600">
-                    {site.pages_crawled > 0 ? site.pages_crawled : "—"}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                        onClick={() => crawlMutation.mutate(site.id)}
-                        disabled={crawlMutation.isPending || site.status === "crawling"}
-                        title={site.status === "pending" ? "Crawl" : "Re-crawl"}
-                      >
-                        {site.status === "crawling" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                      </Button>
-                      {site.status === "ready" && (
-                        <>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-500 hover:text-gray-700" asChild title="Test Chat">
-                            <Link to={`/chat/${site.id}`}><MessageSquare className="h-4 w-4" /></Link>
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-500 hover:text-gray-700" asChild title="Embed Code">
-                            <Link to={`/embed/${site.id}`}><Code className="h-4 w-4" /></Link>
-                          </Button>
-                        </>
-                      )}
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-500 hover:text-red-600" onClick={() => deleteMutation.mutate(site.id)} title="Delete">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
+        <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left font-semibold px-6 py-4">Name</th>
+                  <th className="text-left font-semibold px-6 py-4">Type</th>
+                  <th className="text-left font-semibold px-6 py-4">Provider</th>
+                  <th className="text-left font-semibold px-6 py-4">Status</th>
+                  <th className="text-left font-semibold px-6 py-4">Pages</th>
+                  <th className="text-right font-semibold px-6 py-4">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sites.map((site) => {
+                  const typeInfo = storeTypeConfig[(site as any).store_type || "storefront"] || storeTypeConfig.storefront;
+                  const TypeIcon = typeInfo.icon;
+                  return (
+                    <tr key={site.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-medium">{site.name}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <ExternalLink className="h-3 w-3" />{site.url}
+                        </p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className={`text-xs ${typeInfo.color}`}>
+                          <TypeIcon className="h-3 w-3 mr-1" />{typeInfo.label}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className="text-xs font-mono bg-muted">
+                          {(site as any).ai_provider || "openai"}/{(site as any).ai_model || "gpt-4o-mini"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge className={statusColors[site.status] || ""} variant="outline">{site.status}</Badge>
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {site.pages_crawled > 0 ? site.pages_crawled : "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-1 justify-end">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => crawlMutation.mutate(site.id)} disabled={crawlMutation.isPending || site.status === "crawling"} title={site.status === "pending" ? "Crawl" : "Re-crawl"}>
+                            {site.status === "crawling" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                          {site.status === "ready" && (
+                            <>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Test Chat">
+                                <Link to={`/chat/${site.id}`}><MessageSquare className="h-4 w-4" /></Link>
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="Embed Code">
+                                <Link to={`/embed/${site.id}`}><Code className="h-4 w-4" /></Link>
+                              </Button>
+                            </>
+                          )}
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-destructive" onClick={() => deleteMutation.mutate(site.id)} title="Delete">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-border">
+            {sites.map((site) => {
+              const typeInfo = storeTypeConfig[(site as any).store_type || "storefront"] || storeTypeConfig.storefront;
+              const TypeIcon = typeInfo.icon;
+              return (
+                <div key={site.id} className="p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{site.name}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">{site.url}</p>
+                    </div>
+                    <Badge className={statusColors[site.status] || ""} variant="outline">{site.status}</Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className={`text-xs ${typeInfo.color}`}>
+                      <TypeIcon className="h-3 w-3 mr-1" />{typeInfo.label}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs font-mono bg-muted">
+                      {(site as any).ai_provider || "openai"}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" variant="outline" onClick={() => crawlMutation.mutate(site.id)} disabled={crawlMutation.isPending || site.status === "crawling"}>
+                      <RefreshCw className="h-3 w-3 mr-1" /> Crawl
+                    </Button>
+                    {site.status === "ready" && (
+                      <>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/chat/${site.id}`}><MessageSquare className="h-3 w-3 mr-1" /> Chat</Link>
+                        </Button>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/embed/${site.id}`}><Code className="h-3 w-3 mr-1" /> Embed</Link>
+                        </Button>
+                      </>
+                    )}
+                    <Button size="sm" variant="ghost" className="hover:text-destructive ml-auto" onClick={() => deleteMutation.mutate(site.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
