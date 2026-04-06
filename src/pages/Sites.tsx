@@ -10,9 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink, Store, Copy, Palette } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Globe, Loader2, MessageSquare, Trash2, RefreshCw, Code, ExternalLink, Store as StoreIcon, Copy, Palette, User, Wallet, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import ChatbotThemeSettings from "@/components/ChatbotThemeSettings";
+
+const storeTypeConfig = {
+  storefront: { label: "Storefront", icon: StoreIcon, desc: "Simple chat-to-buy. No login required. Direct purchase via chat." },
+  account: { label: "Account Store", icon: User, desc: "Users login to track orders. Optional wallet." },
+  wallet: { label: "Wallet Platform", icon: Wallet, desc: "Users fund wallet, then purchase. Full transaction history." },
+};
 
 const statusColors: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
@@ -75,6 +82,76 @@ const generateSlug = (name: string): string => {
     .substring(0, 50);
 };
 
+const ApiConfigEditor = ({ siteId, onClose }: { siteId: string; onClose: () => void }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [baseUrl, setBaseUrl] = useState("");
+  const [endpoints, setEndpoints] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data: site } = useQuery({
+    queryKey: ["site-config", siteId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sites").select("api_config, store_type").eq("id", siteId).single();
+      if (error) throw error;
+      if (data?.api_config) {
+        const cfg = data.api_config as any;
+        setBaseUrl(cfg.baseUrl || "");
+        setEndpoints(cfg.endpoints ? JSON.stringify(cfg.endpoints, null, 2) : "");
+      }
+      return data;
+    },
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      let parsedEndpoints = {};
+      if (endpoints.trim()) {
+        try { parsedEndpoints = JSON.parse(endpoints); }
+        catch { toast({ title: "Invalid JSON", description: "Endpoints must be valid JSON", variant: "destructive" }); setSaving(false); return; }
+      }
+      const { error } = await supabase.from("sites").update({ api_config: { baseUrl, endpoints: parsedEndpoints } } as any).eq("id", siteId);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["sites"] });
+      toast({ title: "API config saved" });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  const storeType = (site as any)?.store_type || "storefront";
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        {storeType === "wallet"
+          ? "Configure API endpoints for wallet balance checks, top-ups, and order creation."
+          : "Configure API endpoints for user authentication and order management."}
+      </p>
+      <div className="space-y-2">
+        <Label>API Base URL</Label>
+        <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://yoursite.com/api" />
+      </div>
+      <div className="space-y-2">
+        <Label>Endpoints (JSON)</Label>
+        <Textarea
+          value={endpoints}
+          onChange={(e) => setEndpoints(e.target.value)}
+          placeholder={storeType === "wallet"
+            ? '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create",\n  "walletTopup": "/wallet/topup",\n  "getWalletBalance": "/wallet/balance"\n}'
+            : '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create"\n}'}
+          rows={6}
+          className="font-mono text-xs"
+        />
+      </div>
+      <Button onClick={handleSave} className="w-full" disabled={saving}>
+        {saving ? "Saving..." : "Save Configuration"}
+      </Button>
+    </div>
+  );
+};
+
 const Sites = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -88,6 +165,10 @@ const Sites = () => {
   const [newCurrency, setNewCurrency] = useState("USD");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [themeDialogSiteId, setThemeDialogSiteId] = useState<string | null>(null);
+  const [apiConfigSiteId, setApiConfigSiteId] = useState<string | null>(null);
+  const [newStoreType, setNewStoreType] = useState("storefront");
+  const [apiBaseUrl, setApiBaseUrl] = useState("");
+  const [apiEndpoints, setApiEndpoints] = useState("");
 
   const { data: sites, isLoading } = useQuery({
     queryKey: ["sites"],
@@ -100,6 +181,18 @@ const Sites = () => {
 
   const addSiteMutation = useMutation({
     mutationFn: async () => {
+      const storeConfig = {
+        storefront: { auth_required: false, wallet_enabled: false, payment_mode: "direct" },
+        account: { auth_required: true, wallet_enabled: false, payment_mode: "direct" },
+        wallet: { auth_required: true, wallet_enabled: true, payment_mode: "wallet" },
+      }[newStoreType] || { auth_required: false, wallet_enabled: false, payment_mode: "direct" };
+
+      let apiConfig = null;
+      if (newStoreType !== "storefront" && apiBaseUrl) {
+        try { apiConfig = { baseUrl: apiBaseUrl, endpoints: apiEndpoints ? JSON.parse(apiEndpoints) : {} }; }
+        catch { apiConfig = { baseUrl: apiBaseUrl, endpoints: {} }; }
+      }
+
       const { error } = await supabase.from("sites").insert({
         name: newSiteName,
         url: newSiteUrl,
@@ -109,18 +202,18 @@ const Sites = () => {
         ai_model: newModel,
         industry: newIndustry,
         currency: newCurrency,
+        store_type: newStoreType,
+        ...storeConfig,
+        api_config: apiConfig,
       } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sites"] });
-      setNewSiteName("");
-      setNewSiteUrl("");
-      setNewSlug("");
-      setNewProvider("openai");
-      setNewModel("gpt-4o-mini");
-      setNewIndustry("other");
-      setNewCurrency("USD");
+      setNewSiteName(""); setNewSiteUrl(""); setNewSlug("");
+      setNewProvider("openai"); setNewModel("gpt-4o-mini");
+      setNewIndustry("other"); setNewCurrency("USD");
+      setNewStoreType("storefront"); setApiBaseUrl(""); setApiEndpoints("");
       setDialogOpen(false);
       toast({ title: "Sales Rep created", description: "Crawl the site to train your AI Sales Rep." });
     },
@@ -278,6 +371,69 @@ const Sites = () => {
                   </Select>
                 </div>
               </div>
+
+              {/* Store Type Selection */}
+              <div className="space-y-2">
+                <Label>Store Type</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(storeTypeConfig).map(([key, config]) => {
+                    const Icon = config.icon;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setNewStoreType(key)}
+                        className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                          newStoreType === key ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-sm">{config.label}</p>
+                          <p className="text-xs text-muted-foreground">{config.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* API Config for Account/Wallet stores */}
+              {newStoreType !== "storefront" && (
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg border border-border">
+                  <p className="text-sm font-medium">🔌 Backend API Configuration</p>
+                  <p className="text-xs text-muted-foreground">
+                    {newStoreType === "wallet"
+                      ? "Connect your wallet platform's API so the chatbot can check balances, initiate top-ups, and process orders."
+                      : "Connect your account store's API so the chatbot can verify users and create orders."}
+                  </p>
+                  <div className="space-y-2">
+                    <Label className="text-xs">API Base URL</Label>
+                    <Input
+                      value={apiBaseUrl}
+                      onChange={(e) => setApiBaseUrl(e.target.value)}
+                      placeholder="https://yoursite.com/api"
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">API Endpoints (JSON)</Label>
+                    <Textarea
+                      value={apiEndpoints}
+                      onChange={(e) => setApiEndpoints(e.target.value)}
+                      placeholder={newStoreType === "wallet"
+                        ? '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create",\n  "walletTopup": "/wallet/topup",\n  "getWalletBalance": "/wallet/balance"\n}'
+                        : '{\n  "getUser": "/auth/me",\n  "createOrder": "/orders/create"\n}'}
+                      rows={5}
+                      className="text-xs font-mono"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    💡 You can also configure this later from site settings.
+                  </p>
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={addSiteMutation.isPending}>
                 {addSiteMutation.isPending ? "Creating..." : "Deploy Sales Rep"}
               </Button>
@@ -307,6 +463,7 @@ const Sites = () => {
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left font-medium text-muted-foreground px-4 py-3">Business</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Type</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Landing Page</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Industry</th>
                 <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Status</th>
@@ -314,7 +471,11 @@ const Sites = () => {
               </tr>
             </thead>
             <tbody>
-              {sites.map((site) => (
+              {sites.map((site) => {
+                const sType = (site as any).store_type || "storefront";
+                const typeInfo = storeTypeConfig[sType] || storeTypeConfig.storefront;
+                const TypeIcon = typeInfo.icon;
+                return (
                 <tr key={site.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <div>
@@ -324,6 +485,11 @@ const Sites = () => {
                         <span className="truncate max-w-[180px]">{site.url}</span>
                       </p>
                     </div>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <Badge variant="outline" className="text-xs">
+                      <TypeIcon className="h-3 w-3 mr-1" />{typeInfo.label}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     {site.slug ? (
@@ -378,7 +544,7 @@ const Sites = () => {
                           title="Landing Page"
                         >
                           <a href={`/store/${site.slug}`} target="_blank" rel="noopener noreferrer">
-                            <Store className="h-3.5 w-3.5" />
+                            <StoreIcon className="h-3.5 w-3.5" />
                           </a>
                         </Button>
                       )}
@@ -411,6 +577,17 @@ const Sites = () => {
                         >
                           <Palette className="h-3.5 w-3.5" />
                         </Button>
+                        {sType !== "storefront" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => setApiConfigSiteId(site.id)}
+                            title="API Settings"
+                          >
+                            <Settings className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -423,7 +600,8 @@ const Sites = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -440,6 +618,24 @@ const Sites = () => {
           </DialogHeader>
           {themeDialogSiteId && (
             <ChatbotThemeSettings siteId={themeDialogSiteId} onClose={() => setThemeDialogSiteId(null)} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* API Config Dialog */}
+      <Dialog open={!!apiConfigSiteId} onOpenChange={(open) => !open && setApiConfigSiteId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Backend API Configuration
+            </DialogTitle>
+          </DialogHeader>
+          {apiConfigSiteId && (
+            <ApiConfigEditor
+              siteId={apiConfigSiteId}
+              onClose={() => setApiConfigSiteId(null)}
+            />
           )}
         </DialogContent>
       </Dialog>
