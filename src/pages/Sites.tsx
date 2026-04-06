@@ -95,6 +95,10 @@ const Sites = () => {
   const [newCurrency, setNewCurrency] = useState("USD");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [themeDialogSiteId, setThemeDialogSiteId] = useState<string | null>(null);
+  const [apiConfigSiteId, setApiConfigSiteId] = useState<string | null>(null);
+  const [newStoreType, setNewStoreType] = useState("storefront");
+  const [apiBaseUrl, setApiBaseUrl] = useState("");
+  const [apiEndpoints, setApiEndpoints] = useState("");
 
   const { data: sites, isLoading } = useQuery({
     queryKey: ["sites"],
